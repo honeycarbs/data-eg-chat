@@ -16,7 +16,7 @@ def main():
     today = today.strftime("%Y-%m-%d")
     list = text_file_to_list('id.txt')
     for id in list:
-        fetchData(id, id + "-" + today)
+        fetchData(id, id + "-" + today + ".json")
 
 if __name__ == "__main__":
     main()
