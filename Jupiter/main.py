@@ -15,8 +15,19 @@ def main():
     today = date.today()
     today = today.strftime("%Y-%m-%d")
     list = text_file_to_list('id.txt')
+    import os
+    
+    new_folder_path = "./" + today
+    
+    try:
+        os.mkdir(new_folder_path)
+        print(f"Folder '{new_folder_path}' created successfully.")
+    except FileExistsError:
+        print(f"Folder '{new_folder_path}' already exists.")
+    except FileNotFoundError:
+        print(f"Parent directory does not exist.")
     for id in list:
-        fetchData(id, id + "-" + today + ".json")
+        fetchData(id, today + "/" + id + ".json")
 
 if __name__ == "__main__":
     main()
