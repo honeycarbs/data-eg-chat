@@ -1,5 +1,6 @@
 from fetch import fetchData
 from datetime import date
+from parse import Vehicle
 
 def text_file_to_list(file_path):
     try:
@@ -28,6 +29,12 @@ def main():
         print(f"Parent directory does not exist.")
     for id in list:
         fetchData(id, today + "/" + id + ".json")
+    
+    # add error handling for id's that dont have data for said dates
+    # for id in list:
+    #     test = Vehicle.from_json_bulk(today + "/" + id + ".json")
+    #     print(test[:6])
+
 
 if __name__ == "__main__":
     main()
