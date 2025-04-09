@@ -13,5 +13,5 @@ def fetchData(vehicleID, oFile):
         with open(oFile, 'wb') as file:
             file.write(data)
     except urllib.error.HTTPError as err:
-        with open(oFile, 'wb') as file:
-            file.write('A HTTPError was thrown: 404 NOT FOUND')
+        with open(oFile, 'w') as file:
+            file.write("A HTTPError was thrown: 404 NOT FOUND")
