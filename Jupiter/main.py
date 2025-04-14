@@ -1,6 +1,9 @@
 from fetch import fetchData
 from datetime import date
 from parse import Vehicle
+from pub import publish
+import os
+
 
 def text_file_to_list(file_path):
     try:
@@ -11,6 +14,15 @@ def text_file_to_list(file_path):
         return f"Error: File not found at '{file_path}'"
     except Exception as e:
         return f"An error occurred: {e}"
+    
+def list_files_in_directory(folder_path):
+  try:
+    files = os.listdir(folder_path)
+    return [f for f in files if os.path.isfile(os.path.join(folder_path, f))]
+  except FileNotFoundError:
+    return f"Error: Folder '{folder_path}' not found."
+  except NotADirectoryError:
+    return f"Error: '{folder_path}' is not a directory."
 
 def main():
     today = date.today()
@@ -30,10 +42,15 @@ def main():
     for id in list:
         fetchData(id, today + "/" + id + ".json")
     
-    # add error handling for id's that dont have data for said dates
-    # for id in list:
-    #     test = Vehicle.from_json_bulk(today + "/" + id + ".json")
-    #     print(test[:6])
+    files = list_files_in_directory(new_folder_path)
+
+    for id in files:
+        test = Vehicle.from_json_bulk(today + "/" + id)
+        count = 0
+        for msg in test:
+            if(count == 0):
+                publish(msg)
+                count = 1
 
 
 if __name__ == "__main__":
