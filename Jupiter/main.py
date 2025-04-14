@@ -49,7 +49,7 @@ def main():
         count = 0
         for msg in test:
             if(count == 0):
-                publish(msg)
+                publish(repr(msg))
                 count = 1
 
 
