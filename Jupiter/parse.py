@@ -37,9 +37,7 @@ class Vehicle:
         self.gps_hdop = gps_hdop
 
     def __repr__(self):
-        return f'EVENT_NO_TRIP: {self.event_no_trip}, EVENT_NO_STOP: {self.event_no_stop}, OPD_DATE: {self.opd_date\
-            }, VEHICLE_ID: {self.vehicle_id}, METERS: {self.meters}, ACT_TIME: {self.act_time}, GPS_LONGITUDE: {self.gps_location.longitude()}, GPS_LATITUDE: { \
-            self.gps_location.latitude()}, GPS_SATELLITES: {self.gps_satellites}, GPS_HDOP: {self.gps_hdop}'
+        return f'EVENT_NO_TRIP: {self.event_no_trip}, EVENT_NO_STOP: {self.event_no_stop}, OPD_DATE: {self.opd_date}, VEHICLE_ID: {self.vehicle_id}, METERS: {self.meters}, ACT_TIME: {self.act_time}, GPS_LONGITUDE: {self.gps_location.longitude()}, GPS_LATITUDE: { self.gps_location.latitude()}, GPS_SATELLITES: {self.gps_satellites}, GPS_HDOP: {self.gps_hdop}'
 
     @classmethod
     def from_json(cls, json_string):
