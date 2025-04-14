@@ -44,15 +44,13 @@ def main():
         fetchData(id, today + "/" + id + ".json")
     
     files = list_files_in_directory(new_folder_path)
-
+    count = 0
     for id in files:
         test = Vehicle.from_json_bulk(today + "/" + id)
-        count = 0
         for msg in test:
-            if(count == 0):
-                publish(repr(msg))
-                count = 1
-
+            publish(repr(msg))
+            count += 1
+    publish(str(count))
 
 if __name__ == "__main__":
     main()
