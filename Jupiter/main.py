@@ -30,7 +30,8 @@ def main():
     list = text_file_to_list('id.txt')
     import os
     
-    new_folder_path = "./" + today
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    new_folder_path = os.path.join(script_dir, today)
     
     try:
         os.mkdir(new_folder_path)
