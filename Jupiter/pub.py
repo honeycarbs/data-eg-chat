@@ -2,7 +2,7 @@ import os
 from google.cloud import pubsub_v1
 
 def publish(msg):
-    project_id = "data-engineering-455419 "
+    project_id = "data-engineering-455419"
     topic_id = "Breadcrumb_Storage"
     publisher = pubsub_v1.PublisherClient()
     topic_path = publisher.topic_path(project_id, topic_id)
