@@ -7,7 +7,7 @@ from datetime import datetime
 def fetch():
     project_id = "data-engineering-455419"
     subscription_id = "Breadcrumb_Storage-sub"
-    timeout = 5.0
+    timeout = 300.0
 
     messages = []
 
