@@ -2,6 +2,7 @@ from fetch import fetchData
 from datetime import date
 from parse import Vehicle
 from pub import publish, publisher
+from datetime import datetime
 import os
 
 
@@ -50,7 +51,12 @@ def main():
         for msg in test:
             publish(repr(msg))
             count += 1
-    publish(str(count))
+    today_date = datetime.now().strftime('%Y-%m-%d')
+    file_path = f"sensor_count-{today_date}.txt"
+
+    file = open(file_path, "w")
+    file.write(str(count))
+    file.close()
 
 if __name__ == "__main__":
     main()
