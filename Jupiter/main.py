@@ -1,7 +1,7 @@
 from fetch import fetchData
 from datetime import date
 from parse import Vehicle
-from pub import publish
+from pub import publish, publisher
 import os
 
 
@@ -54,3 +54,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    publisher.transport.close()

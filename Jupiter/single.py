@@ -1,5 +1,5 @@
 from parse import Vehicle
-from pub import publish
+from pub import publish, publisher
 import os
 
 def list_files_in_directory(folder_path):
@@ -24,3 +24,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    publisher.transport.close()
