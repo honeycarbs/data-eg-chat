@@ -20,7 +20,7 @@ def main():
         for msg in test:
             publish(repr(msg))
             count += 1
-    publish(str(count))
+    print(count)
 
 if __name__ == "__main__":
     main()
