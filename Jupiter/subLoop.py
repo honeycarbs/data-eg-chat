@@ -1,4 +1,5 @@
 import json
+import os
 from google.cloud import pubsub_v1
 from concurrent.futures import TimeoutError
 from datetime import datetime
@@ -27,7 +28,8 @@ def fetch():
                 streaming_pull_future.cancel()
                 streaming_pull_future.result()
         today_date = datetime.now().strftime('%Y-%m-%d')
-        filename = f"data-{today_date}.json"
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        filename = os.path.join(script_dir, f"data-{today_date}.json")
         data_to_save = {
             "message_count": len(messages),
             "messages": messages
