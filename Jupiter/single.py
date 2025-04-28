@@ -6,10 +6,9 @@ def list_files_in_directory(folder_path):
   try:
     files = os.listdir(folder_path)
     return [f for f in files if os.path.isfile(os.path.join(folder_path, f))]
-  except FileNotFoundError:
-    return f"Error: Folder '{folder_path}' not found."
-  except NotADirectoryError:
-    return f"Error: '{folder_path}' is not a directory."
+
+  except Exception as e:
+    return f"An error occurred: {e}"
   
 def main():
     folder = ""

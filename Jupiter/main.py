@@ -11,8 +11,7 @@ def text_file_to_list(file_path):
         with open(file_path, 'r') as file:
             lines = [line.strip() for line in file]
         return lines
-    except FileNotFoundError:
-        return f"Error: File not found at '{file_path}'"
+    
     except Exception as e:
         return f"An error occurred: {e}"
     
@@ -20,10 +19,9 @@ def list_files_in_directory(folder_path):
   try:
     files = os.listdir(folder_path)
     return [f for f in files if os.path.isfile(os.path.join(folder_path, f))]
-  except FileNotFoundError:
-    return f"Error: Folder '{folder_path}' not found."
-  except NotADirectoryError:
-    return f"Error: '{folder_path}' is not a directory."
+  
+  except Exception as e:
+    return f"An error occurred: {e}"
 
 def main():
     today = date.today()
@@ -37,10 +35,9 @@ def main():
     try:
         os.mkdir(new_folder_path)
         print(f"Folder '{new_folder_path}' created successfully.")
-    except FileExistsError:
-        print(f"Folder '{new_folder_path}' already exists.")
-    except FileNotFoundError:
-        print(f"Parent directory does not exist.")
+    
+    except Exception as e:
+        return f"An error occurred: {e}"
     for id in list:
         fetchData(id, today + "/" + id + ".json")
     

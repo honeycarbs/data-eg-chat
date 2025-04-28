@@ -12,5 +12,5 @@ def fetchData(vehicleID, oFile):
 
         with open(oFile, 'wb') as file:
             file.write(data)
-    except urllib.error.HTTPError as err:
+    except Exception as e:
         pass
