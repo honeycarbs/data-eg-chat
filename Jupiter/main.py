@@ -27,7 +27,6 @@ def main():
     today = date.today()
     today = today.strftime("%Y-%m-%d")
     list = text_file_to_list('id.txt')
-    import os
     
     script_dir = os.path.dirname(os.path.abspath(__file__))
     new_folder_path = os.path.join(script_dir, today)

@@ -4,6 +4,8 @@ from google.cloud import pubsub_v1
 from concurrent.futures import TimeoutError
 from datetime import datetime
 
+# This subscriber purpose is to loop on our VM to caputer all data published
+
 def fetch():
     project_id = "data-engineering-455419"
     subscription_id = "Breadcrumb_Storage-sub"

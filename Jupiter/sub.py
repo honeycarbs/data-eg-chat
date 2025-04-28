@@ -3,6 +3,9 @@ from google.cloud import pubsub_v1
 from concurrent.futures import TimeoutError
 from datetime import datetime
 
+#The purpose of this subscriber is to run a one off fetch to make sure the data is cleared 
+#(mainly for when we were uploading backlogged data)
+
 def fetch():
     project_id = "data-engineering-455419"
     subscription_id = "Breadcrumb_Storage-sub"
