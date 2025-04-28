@@ -3,8 +3,14 @@ from datetime import date
 from parse import Vehicle
 from pub import publish, publisher
 from datetime import datetime
+from concurrent import futures
 import os
 
+def future_callback(future):
+    try:
+        future.result()  
+    except Exception as e:
+        print(f"An error occurred: {e}")
 
 def text_file_to_list(file_path):
     try:
@@ -34,19 +40,25 @@ def main():
     try:
         os.mkdir(new_folder_path)
         print(f"Folder '{new_folder_path}' created successfully.")
-    
     except Exception as e:
         return f"An error occurred: {e}"
+    
     for id in list:
         fetchData(id, today + "/" + id + ".json")
     
     files = list_files_in_directory(new_folder_path)
     count = 0
+    future_list = []
     for id in files:
         test = Vehicle.from_json_bulk(today + "/" + id)
         for msg in test:
-            publish(repr(msg))
+            future = publish(repr(msg))
+            future_list.append(future)
             count += 1
+
+    for future in futures.as_completed(future_list):
+        continue
+
     today_date = datetime.now().strftime('%Y-%m-%d')
     file_path = f"sensor_count-{today_date}.txt"
 

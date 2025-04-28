@@ -14,3 +14,11 @@ topic_path = publisher.topic_path(project_id, topic_id)
 def publish(msg):
     data = msg.encode("utf-8")
     future = publisher.publish(topic_path, data)
+    future.add_done_callback(future_callback)
+    return future
+
+def future_callback(future):
+    try:
+        future.result()  
+    except Exception as e:
+        print(f"An error occurred: {e}")
