@@ -1,16 +1,12 @@
-DROP SCHEMA IF EXISTS Trimet;
+DROP TABLE IF EXISTS BreadCrumb;
+DROP TABLE IF EXISTS Trip;
+DROP TYPE IF EXISTS service_type;
+DROP TYPE IF EXISTS tripdir_type;
 
-DROP TABLE IF EXISTS Trimet.BreadCrumb;
-DROP TABLE IF EXISTS Trimet.Trip;
-DROP TYPE IF EXISTS Trimet.service_type;
-DROP TYPE IF EXISTS Trimet.tripdir_type;
+CREATE TYPE service_type as enum ('Weekday', 'Saturday', 'Sunday');
+CREATE TYPE tripdir_type as enum ('Out', 'Back');
 
-CREATE SCHEMA Trimet;
-
-CREATE TYPE Trimet.service_type as enum ('Weekday', 'Saturday', 'Sunday');
-CREATE TYPE Trimet.tripdir_type as enum ('Out', 'Back');
-
-CREATE TABLE Trimet.Trip (
+CREATE TABLE Trip (
         trip_id integer,
         route_id integer,
         vehicle_id integer,
@@ -19,7 +15,7 @@ CREATE TABLE Trimet.Trip (
         PRIMARY KEY (trip_id)
 );
 
-CREATE TABLE Trimet.BreadCrumb (
+CREATE TABLE BreadCrumb (
         tstamp timestamp,
         latitude float,
         longitude float,
@@ -27,5 +23,3 @@ CREATE TABLE Trimet.BreadCrumb (
         trip_id integer,
         FOREIGN KEY (trip_id) REFERENCES Trip
 );
-
--- TODO: roles, grants
