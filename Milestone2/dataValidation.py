@@ -265,19 +265,15 @@ class Validation:
 
         print("All direction values are valid (either 1 or 0).")
 
-
+"""
 def fetch_data_from_db():
-    # Set up your PostgreSQL connection parameters
-    db_params = {
-        "dbname": "your_database_name",  # Replace with your database name
-        "user": "your_user_name",        # Replace with your username
-        "password": "your_password",     # Replace with your password
-        "host": "localhost",             # Modify if your database is hosted remotely
-        "port": "5432"                   # Default port for PostgreSQL
-    }
-
     # Connect to PostgreSQL
-    conn = psycopg2.connect(**db_params)
+    conn = psycopg2.connect(
+		host="localhost",
+		database="postgres",
+		user="postgres",
+		password="password",
+	)
 
     # SQL query to fetch data from the BreadCrumb table
     sql_query = "SELECT * FROM BreadCrumb;"
@@ -291,22 +287,24 @@ def fetch_data_from_db():
     return df
 
 
-# Main function to run the validations
+# Main function to test the validations
 def main():
-    # Step 1: Fetch the data from the database
+    # Fetch the data from the database
     df = fetch_data_from_db()
     
-    # Step 2: Pass the DataFrame into the Validation class
+    # Pass the DataFrame into the Validation class
     validation = Validation(df)
 
-    # Step 3: Run the validations
+    # Run the validations
     try:
-        validated_df = validation.start()  # This will run all validations
+        validated_df = validation.start()  # run all validations
         print("Validation completed successfully.")
-        print(validated_df.head())  # Optional: print the first few rows of the validated DataFrame
+        print(validated_df.head())  # print the first few rows of the validated DataFrame
     except ValueError as e:
         print(f"Validation failed: {e}")
 
-# Run the main function
+
 if __name__ == "__main__":
     main()
+
+"""
