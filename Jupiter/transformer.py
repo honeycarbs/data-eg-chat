@@ -23,58 +23,49 @@ class Transformer:
         Returns a data frame object.
         """
 
-        # Create columns needed for DB
+        # Create new columns needed for DB
         self.createSpeed()
         self.createTimestamp()
         self.createDirection()
         self.createServiceKey()
 
-        
         validator = dataValidation.Validation(self.df)
-        
+
         # Timestamp that is not a datetime object found
-        try:
-            validator.validateTstamp()
-        except ValueError as e:
+        if not validator.validateTstamp():
             self.interpolateInvalidTimestamps()
             validator = dataValidation.Validation(self.df)
-        
+
         # Date not following regex found
-        try:
-            validator.validateDate()
-        except ValueError as e:
+        if not validator.validateDate():
             self.removeInvalidDate()
             validator = dataValidation.Validation(self.df)
 
         # Invalid direction value found
         # TODO: Impossible case for now
-        try:
-            validator.validateDirection()
-        except ValueError as e:
+        if not validator.validateDirection():
             pass
 
         # Invalid latitude(s) found, remove associated rows.
-        try:
-            validator.validateLatitudeRange()
-        except ValueError as e:
+        if not validator.validateLatitudeRange():
             self.removeInvalidLatitudes()
             validator = dataValidation.Validation(self.df)
 
         # Invalid longitude(s) found, remove associated rows.
-        try:
-            validator.validateLongitudeRange()
-        except ValueError as e:
+        if not validator.validateLongitudeRange():
             self.removeInvalidLongitudes()
             validator = dataValidation.Validation(self.df)
 
         # Negative speed values
-        try:
-            validator.validateSpeedGreaterThanZero()
-        except ValueError as e:
+        if not validator.validateSpeedGreaterThanZero():
             self.removeInvalidSpeeds()
             validator = dataValidation.Validation(self.df)
 
-
+        # Duplicate timestamp & trip ID rows found
+        if not validator.validateNoDuplicateTstampTripID():
+            self.removeDuplicateTstampTripID()
+            validator = dataValidation.Validation(self.df)
+        
 
     def createSpeed(self):
         """
@@ -228,6 +219,19 @@ class Transformer:
         self.df = self.df[self.df['SPEED'] >= 0]
 
         print(f"Removed rows with negative values in 'SPEED'. Remaining rows: {len(self.df)}")
+
+    def removeDuplicateTstampTripID(self):
+        """
+        Removes rows from the DataFrame that have duplicate pairs of 'TIMESTAMP' and 'EVENT_NO_TRIP'.
+        Keeps the first occurrence of each pair and removes any subsequent duplicates.
+        """
+        if 'TIMESTAMP' not in self.df.columns or 'EVENT_NO_TRIP' not in self.df.columns:
+            raise ValueError("Missing 'TIMESTAMP' or 'EVENT_NO_TRIP' column in the dataframe!")
+
+        # Drop duplicate rows based on the combination of 'TIMESTAMP' and 'EVENT_NO_TRIP'
+        self.df = self.df.drop_duplicates(subset=['TIMESTAMP', 'EVENT_NO_TRIP'], keep='first')
+
+        print(f"Removed duplicate rows based on 'TIMESTAMP' and 'EVENT_NO_TRIP'. Remaining rows: {len(self.df)}")
 
         
 def main():
