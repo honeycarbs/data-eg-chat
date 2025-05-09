@@ -6,9 +6,6 @@ import json
 
 class Transformer:
     def __init__(self, df):
-        """
-        Ensure Transform class is initialized with a pandas DataFrame.
-        """
         self.df = df
     
     def get_dataframe(self):
