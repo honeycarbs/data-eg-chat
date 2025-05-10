@@ -4,9 +4,6 @@ import re
 
 class Validation:
     def __init__(self, df):
-        # Ensure Validation class is initialized with a pandas DataFrame
-        if not isinstance(df, pd.DataFrame):
-            raise TypeError("Expected df to be a pandas DataFrame!")
         self.df = df
     
     def get_dataframe(self):
@@ -14,11 +11,21 @@ class Validation:
         Returns the internal dataframe used for testing.
         """
         return self.df
+    
+    def validate(self):
+        self.validateTstamp(self)
+        self.validateDate(self)
+        self.validateNoDuplicateTstampTripID(self)
+        self.validateLatitudeRange(self)
+        self.validateLongitudeRange(self)
+        self.validateSpeedGreaterThanZero(self)
+
 
     def validateTstamp(self):
         """
-        Validates that 'TIMESTAMP' column exists and all values are datetime.datetime objects.
-        Returns True if valid, False otherwise.
+        Validates and interpolates the 'TIMESTAMP' column in the DataFrame.
+        Converts non-datetime entries to NaT, then uses pandas interpolate to fill missing values.
+        Returns True if 'TIMESTAMP' exists and interpolation succeeds.
         """
         print("Running validateTstamp...")
 
@@ -26,20 +33,28 @@ class Validation:
             print("Missing 'TIMESTAMP' column in the dataframe!")
             return False
 
-        # Mask for non-datetime entries
-        invalid_mask = ~self.df['TIMESTAMP'].apply(lambda x: isinstance(x, datetime))
-        if invalid_mask.any():
-            print(f"Found {invalid_mask.sum()} invalid 'TIMESTAMP' entries.")
+        # Coerce all non-datetime entries to NaT
+        self.df['TIMESTAMP'] = pd.to_datetime(self.df['TIMESTAMP'], errors='coerce')
+
+        # Check if any NaT values remain
+        if self.df['TIMESTAMP'].isna().any():
+            # Set a numeric index if necessary
+            self.df.reset_index(drop=True, inplace=True)
+            self.df['TIMESTAMP'] = self.df['TIMESTAMP'].interpolate(method='time', limit_direction='both')
+
+        # Final check
+        if self.df['TIMESTAMP'].isna().any():
+            print("Interpolation failed for some entries.")
             return False
 
-        print("All 'TIMESTAMP' values are valid datetime objects.")
+        print("All 'TIMESTAMP' values are now valid datetime objects.")
         return True
 
     def validateDate(self):
         """
-        Validates that all 'OPD_DATE' values in the DataFrame match the expected format: DDMMMYYYY:HH:MM:SS.
-        Example: '08DEC2022:00:00:00'
-        Returns True if valid, False otherwise.
+        Ensures 'OPD_DATE' values match the format 'DDMMMYYYY:HH:MM:SS' (e.g., '08DEC2022:00:00:00').
+        Invalid entries are coerced to NaT and interpolated.
+        Returns True if all values are valid or successfully interpolated.
         """
         print("Running validateDate...")
 
@@ -47,22 +62,41 @@ class Validation:
             print("Missing 'OPD_DATE' column in the dataframe!")
             return False
 
-        # Regular expression pattern for the expected date format
+        # Define the regex pattern and function to apply
         pattern = re.compile(r"^\d{2}[A-Z]{3}\d{4}:\d{2}:\d{2}:\d{2}$")
 
-        invalid_mask = ~self.df['OPD_DATE'].astype(str).apply(lambda x: bool(pattern.match(x)))
+        # Convert valid matches to datetime, others to NaT
+        def parse_opd_date(val):
+            if isinstance(val, str) and pattern.match(val):
+                try:
+                    return datetime.strptime(val, "%d%b%Y:%H:%M:%S")
+                except ValueError:
+                    return pd.NaT
+            return pd.NaT
 
-        if invalid_mask.any():
-            print(f"Found {invalid_mask.sum()} 'OPD_DATE' values that do not match the expected format.")
+        self.df['OPD_DATE'] = self.df['OPD_DATE'].apply(parse_opd_date)
+
+        # Interpolate missing (NaT) values
+        if self.df['OPD_DATE'].isna().any():
+            print(f"Interpolating {self.df['OPD_DATE'].isna().sum()} invalid 'OPD_DATE' entries...")
+            self.df.reset_index(drop=True, inplace=True)
+            self.df['OPD_DATE'] = self.df['OPD_DATE'].interpolate(method='time', limit_direction='both')
+
+        # Final check
+        if self.df['OPD_DATE'].isna().any():
+            print("Interpolation failed for some 'OPD_DATE' entries.")
             return False
 
-        print("All 'OPD_DATE' values match the expected date format.")
+        # Reformat interpolated datetime values back to original string format
+        self.df['OPD_DATE'] = self.df['OPD_DATE'].dt.strftime("%d%b%Y:%H:%M:%S").str.upper()
+
+        print("All 'OPD_DATE' values are now valid and formatted correctly.")
         return True
 
     def validateNoDuplicateTstampTripID(self):
         """
-        Validates that there are no duplicate (TIMESTAMP, EVENT_NO_TRIP) pairs.
-        Returns True if valid, False otherwise.
+        Removes duplicate (TIMESTAMP, EVENT_NO_TRIP) pairs from the DataFrame.
+        Returns True if 'TIMESTAMP' and 'EVENT_NO_TRIP' columns exist, False otherwise.
         """
         print("Running validateNoDuplicateTstampTripID...")
 
@@ -70,19 +104,14 @@ class Validation:
             print("Missing 'TIMESTAMP' or 'EVENT_NO_TRIP' columns!")
             return False
 
-        duplicated_mask = self.df.duplicated(subset=['TIMESTAMP', 'EVENT_NO_TRIP'], keep=False)
-
-        if duplicated_mask.any():
-            print(f"Found {duplicated_mask.sum()} duplicate (TIMESTAMP, EVENT_NO_TRIP) pairs.")
-            return False
-
-        print("No duplicate (TIMESTAMP, EVENT_NO_TRIP) pairs found.")
+        self.df.drop_duplicates(subset=['TIMESTAMP', 'EVENT_NO_TRIP'], inplace=True)
         return True
 
     def validateLatitudeRange(self):
         """
-        Validates that all GPS_LATITUDE values are within the valid range (-90 to 90).
-        Returns True if valid, False otherwise.
+        Validates that all GPS_LATITUDE values are within the Portland bus range [45, 46].
+        Out-of-range values are set to NaN and interpolated.
+        Returns True if 'GPS_LATITUDE' column exists and interpolation succeeds.
         """
         print("Running validateLatitudeRange...")
 
@@ -90,19 +119,29 @@ class Validation:
             print("Missing 'GPS_LATITUDE' column in the dataframe!")
             return False
 
-        out_of_range_mask = (self.df['GPS_LATITUDE'] < -90) | (self.df['GPS_LATITUDE'] > 90)
+        # Mark values out of the acceptable range as NaN
+        mask_out_of_range = (self.df['GPS_LATITUDE'] < 45) | (self.df['GPS_LATITUDE'] > 46)
+        self.df.loc[mask_out_of_range, 'GPS_LATITUDE'] = float('nan')
 
-        if out_of_range_mask.any():
-            print(f"Found {out_of_range_mask.sum()} GPS_LATITUDE values outside the valid range.")
+        if self.df['GPS_LATITUDE'].isna().any():
+            print(f"Interpolating {self.df['GPS_LATITUDE'].isna().sum()} out-of-range GPS_LATITUDE values...")
+            self.df.reset_index(drop=True, inplace=True)
+            self.df['GPS_LATITUDE'] = self.df['GPS_LATITUDE'].interpolate(method='linear', limit_direction='both')
+
+        # Final check to ensure all values are within range after interpolation
+        still_out_of_range = (self.df['GPS_LATITUDE'] < 45) | (self.df['GPS_LATITUDE'] > 46) | self.df['GPS_LATITUDE'].isna()
+        if still_out_of_range.any():
+            print("Some GPS_LATITUDE values remain out of range or could not be interpolated.")
             return False
 
-        print("All GPS_LATITUDE values are within the valid range (-90 to 90).")
+        print("All GPS_LATITUDE values are now within the Portland bus range (45 to 46).")
         return True
 
     def validateLongitudeRange(self):
         """
-        Validates that all GPS_LONGITUDE values are within the valid range (-180 to 180).
-        Returns True if valid, False otherwise.
+        Validates that all GPS_LONGITUDE values are within the Portland bus range [-124, -122].
+        Out-of-range values are set to NaN and interpolated.
+        Returns True if 'GPS_LONGITUDE' column exists and interpolation succeeds.
         """
         print("Running validateLongitudeRange...")
 
@@ -110,19 +149,33 @@ class Validation:
             print("Missing 'GPS_LONGITUDE' column in the dataframe!")
             return False
 
-        out_of_range_mask = (self.df['GPS_LONGITUDE'] < -180) | (self.df['GPS_LONGITUDE'] > 180)
+        # Mark out-of-range values as NaN
+        mask_out_of_range = (self.df['GPS_LONGITUDE'] < -124) | (self.df['GPS_LONGITUDE'] > -122)
+        self.df.loc[mask_out_of_range, 'GPS_LONGITUDE'] = float('nan')
 
-        if out_of_range_mask.any():
-            print(f"Found {out_of_range_mask.sum()} GPS_LONGITUDE values outside the valid range.")
+        if self.df['GPS_LONGITUDE'].isna().any():
+            print(f"Interpolating {self.df['GPS_LONGITUDE'].isna().sum()} out-of-range GPS_LONGITUDE values...")
+            self.df.reset_index(drop=True, inplace=True)
+            self.df['GPS_LONGITUDE'] = self.df['GPS_LONGITUDE'].interpolate(method='linear', limit_direction='both')
+
+        # Final check
+        still_out_of_range = (
+            (self.df['GPS_LONGITUDE'] < -124) | 
+            (self.df['GPS_LONGITUDE'] > -122) | 
+            self.df['GPS_LONGITUDE'].isna()
+        )
+        if still_out_of_range.any():
+            print("Some GPS_LONGITUDE values remain out of range or could not be interpolated.")
             return False
 
-        print("All GPS_LONGITUDE values are within the valid range (-180 to 180).")
+        print("All GPS_LONGITUDE values are now within the Portland bus range (-124 to -122).")
         return True
 
     def validateSpeedGreaterThanZero(self):
         """
         Validates that all SPEED values are greater than 0.
-        Returns True if valid, False otherwise.
+        Negative or zero SPEED values are set to NaN and interpolated.
+        Returns True if 'SPEED' column exists and interpolation succeeds.
         """
         print("Running validateSpeedGreaterThanZero...")
 
@@ -130,13 +183,21 @@ class Validation:
             print("Missing 'SPEED' column in the dataframe!")
             return False
 
+        # Replace non-positive SPEED values with NaN
         invalid_speed_mask = self.df['SPEED'] <= 0
+        self.df.loc[invalid_speed_mask, 'SPEED'] = float('nan')
 
-        if invalid_speed_mask.any():
-            print(f"Found {invalid_speed_mask.sum()} SPEED values less than or equal to 0.")
+        if self.df['SPEED'].isna().any():
+            print(f"Interpolating {self.df['SPEED'].isna().sum()} non-positive SPEED values...")
+            self.df.reset_index(drop=True, inplace=True)
+            self.df['SPEED'] = self.df['SPEED'].interpolate(method='linear', limit_direction='both')
+
+        # Final validation check
+        if (self.df['SPEED'] <= 0).any() or self.df['SPEED'].isna().any():
+            print("Some SPEED values remain non-positive or could not be interpolated.")
             return False
 
-        print("All SPEED values are greater than 0.")
+        print("All SPEED values are greater than 0 after interpolation.")
         return True
 
     def validateSummaryStats(self):
@@ -148,21 +209,24 @@ class Validation:
 
         summary_stats = self.df[['GPS_LATITUDE', 'GPS_LONGITUDE', 'SPEED']].describe()
 
-        if not (-90 <= summary_stats.loc['min', 'GPS_LATITUDE'] <= 90 and 
-                -90 <= summary_stats.loc['max', 'GPS_LATITUDE'] <= 90):
-            print("Latitude values are outside of the valid range (-90, 90).")
+        # Check GPS_LATITUDE range (Portland: 45 to 46)
+        if not (45 <= summary_stats.loc['min', 'GPS_LATITUDE'] <= 46 and 
+                45 <= summary_stats.loc['max', 'GPS_LATITUDE'] <= 46):
+            print("Latitude values are outside the valid Portland range (45 to 46).")
             return False
 
-        if not (-180 <= summary_stats.loc['min', 'GPS_LONGITUDE'] <= 180 and 
-                -180 <= summary_stats.loc['max', 'GPS_LONGITUDE'] <= 180):
-            print("Longitude values are outside of the valid range (-180, 180).")
+        # Check GPS_LONGITUDE range (Portland: -124 to -122)
+        if not (-124 <= summary_stats.loc['min', 'GPS_LONGITUDE'] <= -122 and 
+                -124 <= summary_stats.loc['max', 'GPS_LONGITUDE'] <= -122):
+            print("Longitude values are outside the valid Portland range (-124 to -122).")
             return False
 
+        # Check SPEED > 0
         if not (summary_stats.loc['min', 'SPEED'] > 0):
             print("Speed values should be greater than 0.")
             return False
 
-        print("Summary statistics are within expected ranges.")
+        print("Summary statistics are within expected Portland-specific ranges.")
         return True
 
     def validateSpeedDistribution(self):
