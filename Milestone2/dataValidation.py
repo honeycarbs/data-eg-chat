@@ -19,7 +19,10 @@ class Validation:
         self.validateLatitudeRange(self)
         self.validateLongitudeRange(self)
         self.validateSpeedGreaterThanZero(self)
-
+        self.validateTimestampMatchesDate(self)
+        self.validateDirection(self)
+        self.validateTripIdOneVehicle(self)
+        self.validateSpeedDistribution(self)
 
     def validateTstamp(self):
         """
@@ -288,4 +291,36 @@ class Validation:
             return False
 
         print("Each EVENT_NO_TRIP is associated with only one VEHICLE_ID.")
+        return True
+    
+    def validateTimestampMatchesDate(self):
+        """
+        Validates that the date portion of 'TIMESTAMP' matches 'OPD_DATE'.
+        Removes rows where the dates do not match.
+        Returns True if validation is successful, False otherwise.
+        """
+        print("Running validateTimestampMatchesDate...")
+
+        if 'TIMESTAMP' not in self.df.columns or 'OPD_DATE' not in self.df.columns:
+            print("Missing 'TIMESTAMP' or 'OPD_DATE' columns in the dataframe!")
+            return False
+
+        # Convert both to datetime
+        try:
+            timestamp_dates = pd.to_datetime(self.df['TIMESTAMP'], errors='coerce').dt.date
+            opd_dates = pd.to_datetime(self.df['OPD_DATE'], format="%d%b%Y:%H:%M:%S", errors='coerce').dt.date
+        except Exception as e:
+            print(f"Error while parsing datetime columns: {e}")
+            return False
+
+        # Create mask of valid rows where date parts match
+        valid_mask = timestamp_dates == opd_dates
+        mismatch_count = (~valid_mask).sum()
+
+        if mismatch_count > 0:
+            print(f"Removing {mismatch_count} rows with mismatched TIMESTAMP and OPD_DATE...")
+            self.df = self.df[valid_mask].reset_index(drop=True)
+        else:
+            print("All TIMESTAMP and OPD_DATE entries match.")
+
         return True
