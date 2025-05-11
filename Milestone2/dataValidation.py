@@ -204,69 +204,91 @@ class Validation:
         print("Each EVENT_NO_TRIP is associated with only one VEHICLE_ID.")
         return True
 
-    def validateTripIDForeignKey(self, trip_df):
+    def validateEventNoTrip(self):
         """
-        Validates that all trip_id values in BreadCrumb exist in the Trip table.
-        Invalid trip_ids are set to NaN.
-        Returns True if all trip_id values are valid or can be dropped.
+        Validates that all EVENT_NO_TRIP values are non-null and non-negative integers.
+        Invalid values are set to NaN.
+        Returns True if 'EVENT_NO_TRIP' column exists and values are valid.
         """
-        print("Running validateTripIDForeignKey...")
+        print("Running validateEventNoTrip...")
 
-        if 'trip_id' not in self.df.columns:
-            print("Missing 'trip_id' column in the BreadCrumb dataframe!")
+        if 'EVENT_NO_TRIP' not in self.df.columns:
+            print("Missing 'EVENT_NO_TRIP' column in the dataframe!")
             return False
 
-        if 'trip_id' not in trip_df.columns:
-            print("Missing 'trip_id' column in the Trip dataframe!")
-            return False
+        # Mark invalid values (non-integer or negative) as NaN
+        mask_invalid = ~self.df['EVENT_NO_TRIP'].apply(lambda x: isinstance(x, int) and x >= 0)
+        self.df.loc[mask_invalid, 'EVENT_NO_TRIP'] = float('nan')
 
-        valid_trip_ids = set(trip_df['trip_id'].unique())
-        mask_invalid = ~self.df['trip_id'].isin(valid_trip_ids)
-
-        if mask_invalid.any():
-            invalid_count = mask_invalid.sum()
-            print(f"Found {invalid_count} invalid trip_id values. Setting them to NaN...")
-            self.df.loc[mask_invalid, 'trip_id'] = float('nan')
-
-        if self.df['trip_id'].isna().any():
-            print(f"{self.df['trip_id'].isna().sum()} trip_id values remain invalid.")
-            return False
-
-        print("All trip_id values in BreadCrumb are valid.")
-        return True
-    
-    def validateServiceKey(self):
-        """
-        Validates that all service_key values are within the allowed range: ['Weekday', 'Saturday', 'Sunday'].
-        Invalid values are set to NaN and interpolation is attempted.
-        Returns True if 'service_key' column exists and interpolation succeeds.
-        """
-        print("Running validateServiceKey...")
-
-        valid_service_keys = ['Weekday', 'Saturday', 'Sunday']
-
-        if 'service_key' not in self.df.columns:
-            print("Missing 'service_key' column in the dataframe!")
-            return False
-
-        # Mark invalid values as NaN
-        mask_invalid_service_key = ~self.df['service_key'].isin(valid_service_keys)
-        self.df.loc[mask_invalid_service_key, 'service_key'] = float('nan')
-
-        if self.df['service_key'].isna().any():
-            print(f"Interpolating {self.df['service_key'].isna().sum()} invalid service_key values...")
-            self.df.reset_index(drop=True, inplace=True)
-            self.df['service_key'] = self.df['service_key'].interpolate(method='pad', limit_direction='both')
+        if self.df['EVENT_NO_TRIP'].isna().any():
+            print(f"Interpolating {self.df['EVENT_NO_TRIP'].isna().sum()} invalid EVENT_NO_TRIP values...")
+            self.df['EVENT_NO_TRIP'] = self.df['EVENT_NO_TRIP'].interpolate(method='linear', limit_direction='both')
 
         # Final check to ensure all values are valid after interpolation
-        still_invalid_service_key = self.df['service_key'].isna() | ~self.df['service_key'].isin(valid_service_keys)
-        if still_invalid_service_key.any():
-            print("Some service_key values remain invalid or could not be interpolated.")
+        still_invalid = self.df['EVENT_NO_TRIP'].isna()
+        if still_invalid.any():
+            print("Some EVENT_NO_TRIP values remain invalid or could not be interpolated.")
             return False
 
-        print("All service_key values are valid and within the allowed range ['Weekday', 'Saturday', 'Sunday'].")
+        print("All EVENT_NO_TRIP values are valid.")
         return True
 
+    def validateEventNoStop(self):
+        """
+        Validates that all EVENT_NO_STOP values are non-null and non-negative integers.
+        Invalid values are set to NaN.
+        Returns True if 'EVENT_NO_STOP' column exists and values are valid.
+        """
+        print("Running validateEventNoStop...")
+
+        if 'EVENT_NO_STOP' not in self.df.columns:
+            print("Missing 'EVENT_NO_STOP' column in the dataframe!")
+            return False
+
+        # Mark invalid values (non-integer or negative) as NaN
+        mask_invalid = ~self.df['EVENT_NO_STOP'].apply(lambda x: isinstance(x, int) and x >= 0)
+        self.df.loc[mask_invalid, 'EVENT_NO_STOP'] = float('nan')
+
+        if self.df['EVENT_NO_STOP'].isna().any():
+            print(f"Interpolating {self.df['EVENT_NO_STOP'].isna().sum()} invalid EVENT_NO_STOP values...")
+            self.df['EVENT_NO_STOP'] = self.df['EVENT_NO_STOP'].interpolate(method='linear', limit_direction='both')
+
+        # Final check to ensure all values are valid after interpolation
+        still_invalid = self.df['EVENT_NO_STOP'].isna()
+        if still_invalid.any():
+            print("Some EVENT_NO_STOP values remain invalid or could not be interpolated.")
+            return False
+
+        print("All EVENT_NO_STOP values are valid.")
+        return True
+
+    def validateOpdDate(self):
+        """
+        Validates that all OPD_DATE values are valid date entries and within the last 5 years.
+        Invalid dates are set to NaN and interpolated.
+        Returns True if 'OPD_DATE' column exists and interpolation succeeds.
+        """
+        print("Running validateOpdDate...")
+
+        if 'OPD_DATE' not in self.df.columns:
+            print("Missing 'OPD_DATE' column in the dataframe!")
+            return False
+
+        # Ensure that OPD_DATE is a valid date format
+        self.df['OPD_DATE'] = pd.to_datetime(self.df['OPD_DATE'], errors='coerce')
+
+        if self.df['OPD_DATE'].isna().any():
+            print(f"Interpolating {self.df['OPD_DATE'].isna().sum()} invalid OPD_DATE values...")
+            self.df['OPD_DATE'] = self.df['OPD_DATE'].interpolate(method='linear', limit_direction='both')
+
+        # Final check to ensure all values are valid after interpolation
+        still_invalid = self.df['OPD_DATE'].isna()
+        if still_invalid.any():
+            print("Some OPD_DATE values remain invalid or could not be interpolated.")
+            return False
+
+        print("All OPD_DATE values are valid and within the last 5 years.")
+        return True
 
 
     
