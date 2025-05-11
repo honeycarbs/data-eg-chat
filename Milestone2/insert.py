@@ -108,40 +108,37 @@ if __name__ == "__main__":
         transformer.createTimestamp()
 
         # print(transformer.get_dataframe().head())
+        transformer.transform()
         dataframe_updated = transformer.get_dataframe()
         print(dataframe_updated.head())
 
 
         """
-        Database testing. Temoprarily renaming columns by hand.
+        This is how the function is intended to be used. This worked on my local PostgreSQL, sh should work on vm.
         """
         db_uri = "postgresql://postgres:postgres@localhost:5432/testdb"
 
-        breadcrumb_df = df[['TIMESTAMP', 'GPS_LATITUDE', 'GPS_LONGITUDE', 'SPEED', 'EVENT_NO_TRIP']].copy()
-    
-        breadcrumb_df = breadcrumb_df.rename(columns={
-            'TIMESTAMP': 'tstamp',
-            'GPS_LATITUDE': 'latitude',
-            'GPS_LONGITUDE': 'longitude',
-            'SPEED': 'speed',
-            'EVENT_NO_TRIP': 'trip_id'
-        })
+        """
+        Important: dataframe has to be prepared for insertion for both tables. For now,
+        I will do it here manually. Later, it can be added into transformer. Gere is what needs to be done:
+        """
+        def prepare_for_trip_table(df):
+            trip_df = df[['trip_id', 'vehicle_id']].copy()
 
-        trip_df = df[['EVENT_NO_TRIP']].copy()
-    
-        # Rename column and add empty columns as per schema
-        trip_df = trip_df.rename(columns={'EVENT_NO_TRIP': 'trip_id'})
-        trip_df = trip_df.drop_duplicates()  # Only need one record per trip
+            trip_df = trip_df.drop_duplicates(subset=['trip_id'])
+            return trip_df
         
-        # Add empty columns as specified
-        trip_df['route_id'] = None
-        trip_df['vehicle_id'] = None
-        trip_df['service_key'] = None
-        trip_df['direction'] = None
+        def prepare_for_breadcrumb_table(df):
+            breadcrumb_df = df[['tstamp', 'latitude', 'longitude', 'speed', 'trip_id']].copy()
+
+            return breadcrumb_df
         
+        dataframe_trip = prepare_for_trip_table(dataframe_updated)
+        dataframe_breadcrumb = prepare_for_breadcrumb_table(dataframe_updated)
+
         with DataFrameSQLInserter(db_uri) as inserter:
-            inserter.insert_dataframe(trip_df, "trip")
-            inserter.insert_dataframe(breadcrumb_df, "breadcrumb")
+            inserter.insert_dataframe(dataframe_trip, "trip")
+            inserter.insert_dataframe(dataframe_breadcrumb, "breadcrumb")
 
 
     except Exception as e:
