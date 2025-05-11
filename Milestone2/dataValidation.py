@@ -15,16 +15,17 @@ class Validation:
         return self.df
     
     def validate(self):
-        self.validateTstamp()
         self.validateDate()
-        self.validateNoDuplicateTstampTripID()
         self.validateLatitudeRange()
         self.validateLongitudeRange()
-        self.validateSpeedGreaterThanZero()
-        self.validateTimestampMatchesDate()
         self.validateTripIdOneVehicle()
-        self.validateSpeedDistribution()
-
+        self.validateSummaryStats()
+        self.validateDirection()
+        self.validateTripIdOneVehicle()
+        self.validateEventNoTrip()
+        self.validateEventNoStop()
+        self.validateMeters()
+        self.validateActTime()
 
     def validateDate(self):
         """
@@ -262,33 +263,63 @@ class Validation:
         print("All EVENT_NO_STOP values are valid.")
         return True
 
-    def validateOpdDate(self):
+    def validateMeters(self):
         """
-        Validates that all OPD_DATE values are valid date entries and within the last 5 years.
-        Invalid dates are set to NaN and interpolated.
-        Returns True if 'OPD_DATE' column exists and interpolation succeeds.
+        Validates that all METERS values are non-negative.
+        Invalid values are set to NaN.
+        Returns True if 'METERS' column exists and values are valid.
         """
-        print("Running validateOpdDate...")
+        print("Running validateMeters...")
 
-        if 'OPD_DATE' not in self.df.columns:
-            print("Missing 'OPD_DATE' column in the dataframe!")
+        if 'METERS' not in self.df.columns:
+            print("Missing 'METERS' column in the dataframe!")
             return False
 
-        # Ensure that OPD_DATE is a valid date format
-        self.df['OPD_DATE'] = pd.to_datetime(self.df['OPD_DATE'], errors='coerce')
+        # Mark negative values as NaN
+        mask_negative = self.df['METERS'] < 0
+        self.df.loc[mask_negative, 'METERS'] = float('nan')
 
-        if self.df['OPD_DATE'].isna().any():
-            print(f"Interpolating {self.df['OPD_DATE'].isna().sum()} invalid OPD_DATE values...")
-            self.df['OPD_DATE'] = self.df['OPD_DATE'].interpolate(method='linear', limit_direction='both')
+        if self.df['METERS'].isna().any():
+            print(f"Interpolating {self.df['METERS'].isna().sum()} invalid METERS values...")
+            self.df['METERS'] = self.df['METERS'].interpolate(method='linear', limit_direction='both')
 
         # Final check to ensure all values are valid after interpolation
-        still_invalid = self.df['OPD_DATE'].isna()
-        if still_invalid.any():
-            print("Some OPD_DATE values remain invalid or could not be interpolated.")
+        still_negative = self.df['METERS'].isna()
+        if still_negative.any():
+            print("Some METERS values remain invalid or could not be interpolated.")
             return False
 
-        print("All OPD_DATE values are valid and within the last 5 years.")
+        print("All METERS values are valid.")
         return True
+    
+    def validateActTime(self):
+        """
+        Validates that all ACT_TIME values are valid timestamps.
+        Invalid values are set to NaN and interpolated.
+        Returns True if 'ACT_TIME' column exists and interpolation succeeds.
+        """
+        print("Running validateActTime...")
+
+        if 'ACT_TIME' not in self.df.columns:
+            print("Missing 'ACT_TIME' column in the dataframe!")
+            return False
+
+        # Ensure that ACT_TIME is a valid timestamp
+        self.df['ACT_TIME'] = pd.to_datetime(self.df['ACT_TIME'], errors='coerce')
+
+        if self.df['ACT_TIME'].isna().any():
+            print(f"Interpolating {self.df['ACT_TIME'].isna().sum()} invalid ACT_TIME values...")
+            self.df['ACT_TIME'] = self.df['ACT_TIME'].interpolate(method='linear', limit_direction='both')
+
+        # Final check to ensure all values are valid after interpolation
+        still_invalid = self.df['ACT_TIME'].isna()
+        if still_invalid.any():
+            print("Some ACT_TIME values remain invalid or could not be interpolated.")
+            return False
+
+        print("All ACT_TIME values are valid.")
+        return True
+
 
 
     
