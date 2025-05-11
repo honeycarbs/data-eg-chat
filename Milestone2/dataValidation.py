@@ -25,34 +25,6 @@ class Validation:
         self.validateTripIdOneVehicle()
         self.validateSpeedDistribution()
 
-    def validateTstamp(self):
-        """
-        Validates and interpolates the 'TIMESTAMP' column in the DataFrame.
-        Converts non-datetime entries to NaT, then uses pandas interpolate to fill missing values.
-        Returns True if 'TIMESTAMP' exists and interpolation succeeds.
-        """
-        print("Running validateTstamp...")
-
-        if 'TIMESTAMP' not in self.df.columns:
-            print("Missing 'TIMESTAMP' column in the dataframe!")
-            return False
-
-        # Coerce all non-datetime entries to NaT
-        self.df['TIMESTAMP'] = pd.to_datetime(self.df['TIMESTAMP'], errors='coerce')
-
-        # Check if any NaT values remain
-        if self.df['TIMESTAMP'].isna().any():
-            # Set a numeric index if necessary
-            self.df.reset_index(drop=True, inplace=True)
-            self.df['TIMESTAMP'] = self.df['TIMESTAMP'].interpolate(method='time', limit_direction='both')
-
-        # Final check
-        if self.df['TIMESTAMP'].isna().any():
-            print("Interpolation failed for some entries.")
-            return False
-
-        print("All 'TIMESTAMP' values are now valid datetime objects.")
-        return True
 
     def validateDate(self):
         """
@@ -95,20 +67,6 @@ class Validation:
         self.df['OPD_DATE'] = self.df['OPD_DATE'].dt.strftime("%d%b%Y:%H:%M:%S").str.upper()
 
         print("All 'OPD_DATE' values are now valid and formatted correctly.")
-        return True
-
-    def validateNoDuplicateTstampTripID(self):
-        """
-        Removes duplicate (TIMESTAMP, EVENT_NO_TRIP) pairs from the DataFrame.
-        Returns True if 'TIMESTAMP' and 'EVENT_NO_TRIP' columns exist, False otherwise.
-        """
-        print("Running validateNoDuplicateTstampTripID...")
-
-        if 'TIMESTAMP' not in self.df.columns or 'EVENT_NO_TRIP' not in self.df.columns:
-            print("Missing 'TIMESTAMP' or 'EVENT_NO_TRIP' columns!")
-            return False
-
-        self.df.drop_duplicates(subset=['TIMESTAMP', 'EVENT_NO_TRIP'], inplace=True)
         return True
 
     def validateLatitudeRange(self):
@@ -175,34 +133,6 @@ class Validation:
         print("All GPS_LONGITUDE values are now within the Portland bus range (-124 to -122).")
         return True
 
-    def validateSpeedGreaterThanZero(self):
-        """
-        Validates that all SPEED values are greater than 0.
-        Negative or zero SPEED values are set to NaN and interpolated.
-        Returns True if 'SPEED' column exists and interpolation succeeds.
-        """
-        print("Running validateSpeedGreaterThanZero...")
-
-        if 'SPEED' not in self.df.columns:
-            print("Missing 'SPEED' column in the dataframe!")
-            return False
-
-        # Replace non-positive SPEED values with NaN
-        invalid_speed_mask = self.df['SPEED'] <= 0
-        self.df.loc[invalid_speed_mask, 'SPEED'] = float('nan')
-
-        if self.df['SPEED'].isna().any():
-            print(f"Interpolating {self.df['SPEED'].isna().sum()} non-positive SPEED values...")
-            self.df.reset_index(drop=True, inplace=True)
-            self.df['SPEED'] = self.df['SPEED'].interpolate(method='linear', limit_direction='both')
-
-        # Final validation check
-        if (self.df['SPEED'] <= 0).any() or self.df['SPEED'].isna().any():
-            print("Some SPEED values remain non-positive or could not be interpolated.")
-            return False
-
-        print("All SPEED values are greater than 0 after interpolation.")
-        return True
 
     def validateSummaryStats(self):
         """
@@ -231,26 +161,6 @@ class Validation:
             return False
 
         print("Summary statistics are within expected Portland-specific ranges.")
-        return True
-
-    def validateSpeedDistribution(self):
-        """
-        Checks if the distribution of SPEED values looks reasonable.
-        Flags speeds that are more than 3 standard deviations away from the mean.
-        Returns True if valid, False otherwise.
-        """
-        print("Running validateSpeedDistribution...")
-
-        mean_speed = self.df['SPEED'].mean()
-        std_speed = self.df['SPEED'].std()
-
-        outlier_mask = (self.df['SPEED'] < (mean_speed - 3 * std_speed)) | (self.df['SPEED'] > (mean_speed + 3 * std_speed))
-
-        if outlier_mask.any():
-            print(f"Found {outlier_mask.sum()} outlier SPEED values.")
-            return False
-
-        print("Speed values have a reasonable distribution.")
         return True
 
     def validateDirection(self):
@@ -293,38 +203,72 @@ class Validation:
 
         print("Each EVENT_NO_TRIP is associated with only one VEHICLE_ID.")
         return True
-    
-    def validateTimestampMatchesDate(self):
-        """
-        Validates that the date portion of 'TIMESTAMP' matches 'OPD_DATE'.
-        Removes rows where the dates do not match.
-        Returns True if validation is successful, False otherwise.
-        """
-        print("Running validateTimestampMatchesDate...")
 
-        if 'TIMESTAMP' not in self.df.columns or 'OPD_DATE' not in self.df.columns:
-            print("Missing 'TIMESTAMP' or 'OPD_DATE' columns in the dataframe!")
+    def validateTripIDForeignKey(self, trip_df):
+        """
+        Validates that all trip_id values in BreadCrumb exist in the Trip table.
+        Invalid trip_ids are set to NaN.
+        Returns True if all trip_id values are valid or can be dropped.
+        """
+        print("Running validateTripIDForeignKey...")
+
+        if 'trip_id' not in self.df.columns:
+            print("Missing 'trip_id' column in the BreadCrumb dataframe!")
             return False
 
-        # Convert both to datetime
-        try:
-            timestamp_dates = pd.to_datetime(self.df['TIMESTAMP'], errors='coerce').dt.date
-            opd_dates = pd.to_datetime(self.df['OPD_DATE'], format="%d%b%Y:%H:%M:%S", errors='coerce').dt.date
-        except Exception as e:
-            print(f"Error while parsing datetime columns: {e}")
+        if 'trip_id' not in trip_df.columns:
+            print("Missing 'trip_id' column in the Trip dataframe!")
             return False
 
-        # Create mask of valid rows where date parts match
-        valid_mask = timestamp_dates == opd_dates
-        mismatch_count = (~valid_mask).sum()
+        valid_trip_ids = set(trip_df['trip_id'].unique())
+        mask_invalid = ~self.df['trip_id'].isin(valid_trip_ids)
 
-        if mismatch_count > 0:
-            print(f"Removing {mismatch_count} rows with mismatched TIMESTAMP and OPD_DATE...")
-            self.df = self.df[valid_mask].reset_index(drop=True)
-        else:
-            print("All TIMESTAMP and OPD_DATE entries match.")
+        if mask_invalid.any():
+            invalid_count = mask_invalid.sum()
+            print(f"Found {invalid_count} invalid trip_id values. Setting them to NaN...")
+            self.df.loc[mask_invalid, 'trip_id'] = float('nan')
 
+        if self.df['trip_id'].isna().any():
+            print(f"{self.df['trip_id'].isna().sum()} trip_id values remain invalid.")
+            return False
+
+        print("All trip_id values in BreadCrumb are valid.")
         return True
+    
+    def validateServiceKey(self):
+        """
+        Validates that all service_key values are within the allowed range: ['Weekday', 'Saturday', 'Sunday'].
+        Invalid values are set to NaN and interpolation is attempted.
+        Returns True if 'service_key' column exists and interpolation succeeds.
+        """
+        print("Running validateServiceKey...")
+
+        valid_service_keys = ['Weekday', 'Saturday', 'Sunday']
+
+        if 'service_key' not in self.df.columns:
+            print("Missing 'service_key' column in the dataframe!")
+            return False
+
+        # Mark invalid values as NaN
+        mask_invalid_service_key = ~self.df['service_key'].isin(valid_service_keys)
+        self.df.loc[mask_invalid_service_key, 'service_key'] = float('nan')
+
+        if self.df['service_key'].isna().any():
+            print(f"Interpolating {self.df['service_key'].isna().sum()} invalid service_key values...")
+            self.df.reset_index(drop=True, inplace=True)
+            self.df['service_key'] = self.df['service_key'].interpolate(method='pad', limit_direction='both')
+
+        # Final check to ensure all values are valid after interpolation
+        still_invalid_service_key = self.df['service_key'].isna() | ~self.df['service_key'].isin(valid_service_keys)
+        if still_invalid_service_key.any():
+            print("Some service_key values remain invalid or could not be interpolated.")
+            return False
+
+        print("All service_key values are valid and within the allowed range ['Weekday', 'Saturday', 'Sunday'].")
+        return True
+
+
+
     
 def main():
     """
