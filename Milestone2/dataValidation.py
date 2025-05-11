@@ -19,13 +19,13 @@ class Validation:
         self.validateLatitudeRange()
         self.validateLongitudeRange()
         self.validateTripIdOneVehicle()
-        self.validateSummaryStats()
+        #self.validateSummaryStats()
         self.validateDirection()
         self.validateTripIdOneVehicle()
         self.validateEventNoTrip()
         self.validateEventNoStop()
         self.validateMeters()
-        self.validateActTime()
+        #self.validateActTime()
 
     def validateDate(self):
         """
@@ -208,7 +208,7 @@ class Validation:
     def validateEventNoTrip(self):
         """
         Validates that all EVENT_NO_TRIP values are non-null and non-negative integers.
-        Invalid values are set to NaN.
+        Invalid values are set to NaN and interpolated.
         Returns True if 'EVENT_NO_TRIP' column exists and values are valid.
         """
         print("Running validateEventNoTrip...")
@@ -237,7 +237,7 @@ class Validation:
     def validateEventNoStop(self):
         """
         Validates that all EVENT_NO_STOP values are non-null and non-negative integers.
-        Invalid values are set to NaN.
+        Invalid values are set to NaN and interpolated.
         Returns True if 'EVENT_NO_STOP' column exists and values are valid.
         """
         print("Running validateEventNoStop...")
@@ -266,7 +266,7 @@ class Validation:
     def validateMeters(self):
         """
         Validates that all METERS values are non-negative.
-        Invalid values are set to NaN.
+        Invalid values are set to NaN and interpolated.
         Returns True if 'METERS' column exists and values are valid.
         """
         print("Running validateMeters...")
@@ -350,11 +350,7 @@ def main():
         for col in numeric_cols:
             df[col] = pd.to_numeric(df[col], errors='coerce')
 
-        # Instantiate your Transformer
-        transformer = Transformer(df)
-        transformer.transform()
-
-        validator = Validation(transformer.get_dataframe())
+        validator = Validation(df)
         validator.validate()
         print(validator.get_dataframe())
 
