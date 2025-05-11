@@ -6,6 +6,7 @@ import csv
 from io import StringIO
 
 from transformer import Transformer
+from dataValidation import Validation
 from json import load, JSONDecodeError
 
 def psql_insert_copy(table, conn, keys, data_iter):
@@ -102,15 +103,16 @@ if __name__ == "__main__":
         for col in numeric_cols:
             df[col] = pd.to_numeric(df[col], errors='coerce')
 
-        # Instantiate your Transformer
-        transformer = Transformer(df)
-        transformer.createSpeed()
-        transformer.createTimestamp()
+        # Instantiate the Validator
+        validator = Validation(df)
+        validator.validate()
 
-        # print(transformer.get_dataframe().head())
+        validated_df = validator.get_dataframe()
+
+        transformer = Transformer(validated_df)
         transformer.transform()
-        dataframe_updated = transformer.get_dataframe()
-        print(dataframe_updated.head())
+        transformed_df = transformer.get_dataframe()
+        print(transformed_df.head())
 
 
         """
@@ -133,8 +135,8 @@ if __name__ == "__main__":
 
             return breadcrumb_df
         
-        dataframe_trip = prepare_for_trip_table(dataframe_updated)
-        dataframe_breadcrumb = prepare_for_breadcrumb_table(dataframe_updated)
+        dataframe_trip = prepare_for_trip_table(transformed_df)
+        dataframe_breadcrumb = prepare_for_breadcrumb_table(transformed_df)
 
         with DataFrameSQLInserter(db_uri) as inserter:
             inserter.insert_dataframe(dataframe_trip, "trip")
