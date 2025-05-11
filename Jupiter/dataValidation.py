@@ -1,6 +1,8 @@
 import pandas as pd
 from datetime import datetime
 import re
+import json
+from transformer import Transformer
 
 class Validation:
     def __init__(self, df):
@@ -13,13 +15,15 @@ class Validation:
         return self.df
     
     def validate(self):
-        self.validateTstamp(self)
-        self.validateDate(self)
-        self.validateNoDuplicateTstampTripID(self)
-        self.validateLatitudeRange(self)
-        self.validateLongitudeRange(self)
-        self.validateSpeedGreaterThanZero(self)
-
+        self.validateTstamp()
+        self.validateDate()
+        self.validateNoDuplicateTstampTripID()
+        self.validateLatitudeRange()
+        self.validateLongitudeRange()
+        self.validateSpeedGreaterThanZero()
+        self.validateTimestampMatchesDate()
+        self.validateTripIdOneVehicle()
+        self.validateSpeedDistribution()
 
     def validateTstamp(self):
         """
@@ -289,3 +293,81 @@ class Validation:
 
         print("Each EVENT_NO_TRIP is associated with only one VEHICLE_ID.")
         return True
+    
+    def validateTimestampMatchesDate(self):
+        """
+        Validates that the date portion of 'TIMESTAMP' matches 'OPD_DATE'.
+        Removes rows where the dates do not match.
+        Returns True if validation is successful, False otherwise.
+        """
+        print("Running validateTimestampMatchesDate...")
+
+        if 'TIMESTAMP' not in self.df.columns or 'OPD_DATE' not in self.df.columns:
+            print("Missing 'TIMESTAMP' or 'OPD_DATE' columns in the dataframe!")
+            return False
+
+        # Convert both to datetime
+        try:
+            timestamp_dates = pd.to_datetime(self.df['TIMESTAMP'], errors='coerce').dt.date
+            opd_dates = pd.to_datetime(self.df['OPD_DATE'], format="%d%b%Y:%H:%M:%S", errors='coerce').dt.date
+        except Exception as e:
+            print(f"Error while parsing datetime columns: {e}")
+            return False
+
+        # Create mask of valid rows where date parts match
+        valid_mask = timestamp_dates == opd_dates
+        mismatch_count = (~valid_mask).sum()
+
+        if mismatch_count > 0:
+            print(f"Removing {mismatch_count} rows with mismatched TIMESTAMP and OPD_DATE...")
+            self.df = self.df[valid_mask].reset_index(drop=True)
+        else:
+            print("All TIMESTAMP and OPD_DATE entries match.")
+
+        return True
+    
+def main():
+    """
+        Main function used for TESTING purposes. Include a local json file
+        and modify file_path accordingly to test the transformations.
+    """
+    file_path = 'data-2025-05-08.json'
+
+    try:
+        with open(file_path, 'r') as file:
+            data = json.load(file)
+
+        # Step 1: Convert list of strings to list of dictionaries
+        raw_messages = data.get('messages', [])
+        parsed_messages = []
+        for msg in raw_messages:
+            fields = dict(field.strip().split(': ', 1) for field in msg.split(', '))
+            parsed_messages.append(fields)
+
+        # Step 2: Convert to DataFrame
+        df = pd.DataFrame(parsed_messages)
+
+        # Optional: Convert numeric columns
+        numeric_cols = ['EVENT_NO_TRIP', 'EVENT_NO_STOP', 'VEHICLE_ID', 'METERS', 'ACT_TIME',
+                        'GPS_LONGITUDE', 'GPS_LATITUDE', 'GPS_SATELLITES', 'GPS_HDOP']
+        for col in numeric_cols:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+
+        # Instantiate your Transformer
+        transformer = Transformer(df)
+        transformer.transform()
+
+        validator = Validation(transformer.get_dataframe())
+        validator.validate()
+        print(validator.get_dataframe())
+
+    except FileNotFoundError:
+        print(f"Error: The file '{file_path}' was not found.")
+    except json.JSONDecodeError:
+        print("Error: Failed to decode JSON from the file.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+
+if __name__ == "__main__":
+    main()

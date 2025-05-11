@@ -21,15 +21,17 @@ class Transformer:
         # Create new columns needed for DB
         self.createSpeed()
         self.createTimestamp()
+        self.renameColumns()
+        self.dropColumns()
         
     def createSpeed(self):
         """
-        Creates a SPEED column in the DataFrame by calculating:
+        Creates a speed column in the DataFrame by calculating:
         (current_row['METERS'] - previous_row['METERS']) / 
         (current_row['ACT_TIME'] - previous_row['ACT_TIME'])
 
         This is computed within each EVENT_NO_TRIP group (i.e., per trip).
-        The first row of each group will have its SPEED set equal to the next row's SPEED if available.
+        The first row of each group will have its speed set equal to the next row's speed if available.
         """
 
         def compute_speed(group):
@@ -37,16 +39,20 @@ class Transformer:
             delta_time = group['ACT_TIME'].diff()
             speed = delta_meters / delta_time
 
-            # Fill first row's speed with second row's speed if it exists
+            # Fill first row's speed with second row's speed if available
             if len(speed) > 1:
                 speed.iloc[0] = speed.iloc[1]
             return speed
 
-        self.df['SPEED'] = self.df.groupby('EVENT_NO_TRIP', group_keys=False).apply(compute_speed)
+        self.df['speed'] = (
+            self.df
+            .groupby('EVENT_NO_TRIP', group_keys=False)[['METERS', 'ACT_TIME']]
+            .apply(compute_speed)
+        )
     
     def createTimestamp(self):
         """
-        Compute timestamp from ODP_DATE and ACT_TIME
+        Compute timestamp (tstamp) from ODP_DATE and ACT_TIME
         """
         # Convert 'OPD_DATE' to datetime objects
         base_dates = pd.to_datetime(self.df['OPD_DATE'], format='%d%b%Y:%H:%M:%S')
@@ -55,9 +61,33 @@ class Transformer:
         time_offsets = pd.to_timedelta(self.df['ACT_TIME'], unit='s')
 
         # Compute the final TIMESTAMP by adding the time offset to the base date
-        self.df['TIMESTAMP'] = base_dates + time_offsets
+        self.df['tstamp'] = base_dates + time_offsets
+    
+    def renameColumns(self):
+        """
+        Renames columns to match database schema.
+        """
+        self.df.rename(columns={
+            'EVENT_NO_TRIP': 'trip_id',
+            'GPS_LONGITUDE': 'longitude',
+            'GPS_LATITUDE': 'latitude',
+            'VEHICLE_ID': 'vehicle_id'
+        }, inplace=True)
+    
+    def dropColumns(self):
+        """
+        Drops columns that are not needed for the database.
+        """
+        columns_to_drop = [
+            'EVENT_NO_STOP',
+            'OPD_DATE',
+            'METERS',
+            'ACT_TIME',
+            'GPS_SATELLITES',
+            'GPS_HDOP'
+        ]
+        self.df.drop(columns=columns_to_drop, inplace=True, errors='ignore')
 
-        
 def main():
     """
         Main function used for TESTING purposes. Include a local json file
@@ -87,9 +117,7 @@ def main():
 
         # Instantiate your Transformer
         transformer = Transformer(df)
-        transformer.createSpeed()
-        transformer.createTimestamp()
-
+        transformer.transform()
         print(transformer.get_dataframe())
 
     except FileNotFoundError:
