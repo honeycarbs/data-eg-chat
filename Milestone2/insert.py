@@ -45,12 +45,12 @@ class DataFrameSQLInserter:
             self.engine.dispose()
             print("Database connection closed.")
     
-    def insert_dataframe(self, df: pd.DataFrame, table_name: str, if_exists: str = "fail", index: bool = False, dtype: Optional[Dict[str, Any]] = None, method: Optional[str] = None):
+    def insert_dataframe(self, df: pd.DataFrame, table_name: str, if_exists: str = "append", index: bool = False, dtype: Optional[Dict[str, Any]] = None, method: Optional[str] = None) -> int:
         if self.engine is None:
             self.connect()
         
         try:
-            df.to_sql(
+            rows_inserted = df.to_sql(
                 table_name,
                 con=self.engine,
                 if_exists=if_exists,
@@ -59,9 +59,11 @@ class DataFrameSQLInserter:
                 method=method,
                 chunksize=self.batch_size,
             )
-            print(f"Successfully inserted {len(df)} rows into '{table_name}'.")
+            print(f"Successfully inserted {rows_inserted} rows into '{table_name}'.")
         except exc.SQLAlchemyError as e:
             raise RuntimeError(f"Failed to insert data: {e}") from e
+        
+        return rows_inserted
     
     def __enter__(self):
         """Context manager entry (for 'with' statement)."""
@@ -105,22 +107,42 @@ if __name__ == "__main__":
         transformer.createSpeed()
         transformer.createTimestamp()
 
-        df_updated = transformer.get_dataframe()
-        print(df_updated)
+        # print(transformer.get_dataframe().head())
+        dataframe_updated = transformer.get_dataframe()
+        print(dataframe_updated.head())
 
-    except FileNotFoundError:
-        print(f"Error: The file '{file_path}' was not found.")
-    except JSONDecodeError:
-        print("Error: Failed to decode JSON from the file.")
+
+        """
+        Database testing. Temoprarily renaming columns by hand.
+        """
+        db_uri = "postgresql://postgres:postgres@localhost:5432/testdb"
+
+        breadcrumb_df = df[['TIMESTAMP', 'GPS_LATITUDE', 'GPS_LONGITUDE', 'SPEED', 'EVENT_NO_TRIP']].copy()
+    
+        breadcrumb_df = breadcrumb_df.rename(columns={
+            'TIMESTAMP': 'tstamp',
+            'GPS_LATITUDE': 'latitude',
+            'GPS_LONGITUDE': 'longitude',
+            'SPEED': 'speed',
+            'EVENT_NO_TRIP': 'trip_id'
+        })
+
+        trip_df = df[['EVENT_NO_TRIP']].copy()
+    
+        # Rename column and add empty columns as per schema
+        trip_df = trip_df.rename(columns={'EVENT_NO_TRIP': 'trip_id'})
+        trip_df = trip_df.drop_duplicates()  # Only need one record per trip
+        
+        # Add empty columns as specified
+        trip_df['route_id'] = None
+        trip_df['vehicle_id'] = None
+        trip_df['service_key'] = None
+        trip_df['direction'] = None
+        
+        with DataFrameSQLInserter(db_uri) as inserter:
+            inserter.insert_dataframe(trip_df, "trip")
+            inserter.insert_dataframe(breadcrumb_df, "breadcrumb")
+
+
     except Exception as e:
-        print(f"An error occurred: {e}")
-
-
-    
-    """
-    Database testing
-    """
-    db_uri = "postgresql://postgres:postgres@localhost:5432/testdb"
-    
-    with DataFrameSQLInserter(db_uri) as inserter:
-        inserter.insert_dataframe(df_updated, "Trip")
+        print(e)
