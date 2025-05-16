@@ -1,23 +1,27 @@
-# pip install packages!!!
-
 import urllib.request
 import urllib.parse
 import pandas as pd
 
-def fetchStopEvents(vehicleID, oFile):
-    url = f"https://busdata.cs.pdx.edu/api/getStopEvents?vehicle_num={urllib.parse.quote(vehicleID)}"
-    try:
-        response = urllib.request.urlopen(url)
-        html_data = response.read()
+class StopEventFetcher:
+    def __init__(self, vehicle_id):
+        self.vehicle_id = vehicle_id
+        self.base_url = "https://busdata.cs.pdx.edu/api/getStopEvents"
 
-        tables = pd.read_html(html_data)
-        if tables:
-            df = tables[0]
-            print(df)
-            df.to_csv(oFile, index=False)
+    def fetch(self, output_file):
+        url = f"{self.base_url}?vehicle_num={urllib.parse.quote(self.vehicle_id)}"
+        try:
+            response = urllib.request.urlopen(url)
+            html_data = response.read()
 
-    except Exception as e:
-        print("In except block")
-        
-# How to use it:
-fetchStopEvents("2907", "stop_events_2907.csv")
+            tables = pd.read_html(html_data)
+            if tables:
+                df = tables[0]
+                print(df)
+                df.to_csv(output_file, index=False)
+        except Exception as e:
+            print("In except block")
+            print(f"Error: {e}")
+
+# Example usage:
+fetcher = StopEventFetcher("2907")
+fetcher.fetch("stop_events_2907.csv")
