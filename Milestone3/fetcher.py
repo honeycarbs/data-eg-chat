@@ -5,7 +5,7 @@ import pandas as pd
 class StopEventFetcher:
     def __init__(self, vehicle_id):
         self.vehicle_id = vehicle_id
-        self.base_url = "https://busdata.cs.pdx.edu/api/getStopEvents"
+        self.base_url = "https://busdata.cs.pdx.edu/api/getStopEvents?vehicle_num=<vehicle_num>"
 
     def fetch(self, output_file):
         url = f"{self.base_url}?vehicle_num={urllib.parse.quote(self.vehicle_id)}"
