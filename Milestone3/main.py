@@ -4,7 +4,7 @@ import logging
 class DataPipeline:
     def __init__(self, LOG_LEVEL):
         self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(logging.DEBUG)
+        self.logger.setLevel(LOG_LEVEL)
 
         fh = logging.FileHandler('data_pipeline.log')
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
