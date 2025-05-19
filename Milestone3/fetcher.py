@@ -31,9 +31,9 @@ class StopEventFetcher:
                 self.logger.info(f"fetched data for vehicle {vehicle_id}")
                 df.to_json(output_file, orient="records", indent=2)
             else:
-                self.logger.info(f"no data found for vehicle {vehicle_id}")
+                self.logger.warning(f"no data found for vehicle {vehicle_id}")
         except Exception as e:
-            self.logger.info(f"error fetching data for vehicle {vehicle_id}: {e}")
+            self.logger.error(f"error fetching data for vehicle {vehicle_id}: {e}")
 
 
 # Read IDs from the file and fetch stop events
