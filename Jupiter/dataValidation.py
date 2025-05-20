@@ -15,17 +15,16 @@ class Validation:
         return self.df
     
     def validate(self):
+        self.removeInvalidLatitude()
+        self.removeInvalidLongitude()
         self.validateDate()
         self.validateLatitudeRange()
         self.validateLongitudeRange()
         self.validateTripIdOneVehicle()
-        #self.validateSummaryStats()
         self.validateDirection()
-        self.validateTripIdOneVehicle()
         self.validateEventNoTrip()
         self.validateEventNoStop()
         self.validateMeters()
-        #self.validateActTime()
 
     def validateDate(self):
         """
@@ -320,8 +319,72 @@ class Validation:
         print("All ACT_TIME values are valid.")
         return True
 
+    def removeInvalidLatitude(self):
+        """
+        Removes rows where GPS_LATITUDE is None.
+        Returns True if 'GPS_LATITUDE' column exists.
+        """
+        print("Running removeInvalidLatitude...")
 
+        if 'GPS_LATITUDE' not in self.df.columns:
+            print("Missing 'GPS_LATITUDE' column in the dataframe!")
+            return False
 
+        initial_count = len(self.df)
+        self.df = self.df[self.df['GPS_LATITUDE'].notna()]
+        removed_count = initial_count - len(self.df)
+
+        print(f"Removed {removed_count} rows with None GPS_LATITUDE.")
+        return True
+
+    def removeInvalidLongitude(self):
+        """
+        Removes rows where GPS_LONGITUDE is None.
+        Returns True if 'GPS_LONGITUDE' column exists.
+        """
+        print("Running removeInvalidLongitude...")
+
+        if 'GPS_LONGITUDE' not in self.df.columns:
+            print("Missing 'GPS_LONGITUDE' column in the dataframe!")
+            return False
+
+        initial_count = len(self.df)
+        self.df = self.df[self.df['GPS_LONGITUDE'].notna()]
+        removed_count = initial_count - len(self.df)
+
+        print(f"Removed {removed_count} rows with None GPS_LONGITUDE.")
+        return True
+    
+
+    def validateSpeed(self):
+        """
+        Validates that all SPEED values are less than or equal to 32.0.
+        Values above 32.0 are set to NaN before interpolation.
+        Returns True if 'SPEED' column exists and interpolation succeeds.
+        """
+        print("Running validateSpeed...")
+
+        if 'SPEED' not in self.df.columns:
+            print("Missing 'SPEED' column in the dataframe!")
+            return False
+
+        # Mark speeds above 32.0 as NaN
+        mask_too_fast = self.df['SPEED'] > 32.0
+        self.df.loc[mask_too_fast, 'SPEED'] = float('nan')
+
+        if self.df['SPEED'].isna().any():
+            print(f"Interpolating {self.df['SPEED'].isna().sum()} SPEED values greater than 32.0...")
+            self.df['SPEED'] = self.df['SPEED'].interpolate(method='linear', limit_direction='both')
+
+        # Final check to ensure all SPEED values are now <= 32.0 and not NaN
+        invalid_mask = self.df['SPEED'].isna() | (self.df['SPEED'] > 32.0)
+        if invalid_mask.any():
+            print("Some SPEED values remain invalid or could not be interpolated.")
+            return False
+
+        print("All SPEED values are now valid (≤ 32.0).")
+        return True
+    
     
 def main():
     """
