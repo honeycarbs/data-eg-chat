@@ -14,17 +14,20 @@ class Validation:
         """
         return self.df
     
-    def validate(self):
+    def validateBeforeTransform(self):
         self.removeInvalidLatitude()
         self.removeInvalidLongitude()
         self.validateDate()
         self.validateLatitudeRange()
         self.validateLongitudeRange()
         self.validateTripIdOneVehicle()
-        self.validateDirection()
         self.validateEventNoTrip()
         self.validateEventNoStop()
         self.validateMeters()
+    
+    def validateAfterTransform(self):
+        self.validateSpeed()
+        self.validateDirection()
 
     def validateDate(self):
         """
@@ -358,31 +361,31 @@ class Validation:
 
     def validateSpeed(self):
         """
-        Validates that all SPEED values are less than or equal to 32.0.
+        Validates that all speed values are less than or equal to 32.0.
         Values above 32.0 are set to NaN before interpolation.
-        Returns True if 'SPEED' column exists and interpolation succeeds.
+        Returns True if 'speed' column exists and interpolation succeeds.
         """
         print("Running validateSpeed...")
 
-        if 'SPEED' not in self.df.columns:
-            print("Missing 'SPEED' column in the dataframe!")
+        if 'speed' not in self.df.columns:
+            print("Missing 'speed' column in the dataframe!")
             return False
 
         # Mark speeds above 32.0 as NaN
-        mask_too_fast = self.df['SPEED'] > 32.0
-        self.df.loc[mask_too_fast, 'SPEED'] = float('nan')
+        mask_too_fast = self.df['speed'] > 32.0
+        self.df.loc[mask_too_fast, 'speed'] = float('nan')
 
-        if self.df['SPEED'].isna().any():
-            print(f"Interpolating {self.df['SPEED'].isna().sum()} SPEED values greater than 32.0...")
-            self.df['SPEED'] = self.df['SPEED'].interpolate(method='linear', limit_direction='both')
+        if self.df['speed'].isna().any():
+            print(f"Interpolating {self.df['speed'].isna().sum()} speed values greater than 32.0...")
+            self.df['speed'] = self.df['speed'].interpolate(method='linear', limit_direction='both')
 
-        # Final check to ensure all SPEED values are now <= 32.0 and not NaN
-        invalid_mask = self.df['SPEED'].isna() | (self.df['SPEED'] > 32.0)
+        # Final check to ensure all speed values are now <= 32.0 and not NaN
+        invalid_mask = self.df['speed'].isna() | (self.df['speed'] > 32.0)
         if invalid_mask.any():
-            print("Some SPEED values remain invalid or could not be interpolated.")
+            print("Some speed values remain invalid or could not be interpolated.")
             return False
 
-        print("All SPEED values are now valid (≤ 32.0).")
+        print("All speed values are now valid (≤ 32.0).")
         return True
     
     
@@ -414,8 +417,15 @@ def main():
             df[col] = pd.to_numeric(df[col], errors='coerce')
 
         validator = Validation(df)
-        validator.validate()
-        print(validator.get_dataframe())
+        validator.validateBeforeTransform()
+        transformer = Transformer(validator.get_dataframe())
+        transformer.transform()
+        transformed_df = transformer.get_dataframe()
+
+        Validation(transformed_df).validateAfterTransform()
+        print(transformed_df)
+        max_speed = transformed_df['speed'].max()
+        print(f'Max speed found: {max_speed}')
 
     except FileNotFoundError:
         print(f"Error: The file '{file_path}' was not found.")
