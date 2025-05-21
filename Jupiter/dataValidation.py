@@ -14,18 +14,20 @@ class Validation:
         """
         return self.df
     
-    def validate(self):
+    def validateBeforeTransform(self):
+        self.removeInvalidLatitude()
+        self.removeInvalidLongitude()
         self.validateDate()
         self.validateLatitudeRange()
         self.validateLongitudeRange()
         self.validateTripIdOneVehicle()
-        #self.validateSummaryStats()
-        self.validateDirection()
-        self.validateTripIdOneVehicle()
         self.validateEventNoTrip()
         self.validateEventNoStop()
         self.validateMeters()
-        #self.validateActTime()
+    
+    def validateAfterTransform(self):
+        self.validateSpeed()
+        self.validateDirection()
 
     def validateDate(self):
         """
@@ -320,8 +322,72 @@ class Validation:
         print("All ACT_TIME values are valid.")
         return True
 
+    def removeInvalidLatitude(self):
+        """
+        Removes rows where GPS_LATITUDE is None.
+        Returns True if 'GPS_LATITUDE' column exists.
+        """
+        print("Running removeInvalidLatitude...")
 
+        if 'GPS_LATITUDE' not in self.df.columns:
+            print("Missing 'GPS_LATITUDE' column in the dataframe!")
+            return False
 
+        initial_count = len(self.df)
+        self.df = self.df[self.df['GPS_LATITUDE'].notna()]
+        removed_count = initial_count - len(self.df)
+
+        print(f"Removed {removed_count} rows with None GPS_LATITUDE.")
+        return True
+
+    def removeInvalidLongitude(self):
+        """
+        Removes rows where GPS_LONGITUDE is None.
+        Returns True if 'GPS_LONGITUDE' column exists.
+        """
+        print("Running removeInvalidLongitude...")
+
+        if 'GPS_LONGITUDE' not in self.df.columns:
+            print("Missing 'GPS_LONGITUDE' column in the dataframe!")
+            return False
+
+        initial_count = len(self.df)
+        self.df = self.df[self.df['GPS_LONGITUDE'].notna()]
+        removed_count = initial_count - len(self.df)
+
+        print(f"Removed {removed_count} rows with None GPS_LONGITUDE.")
+        return True
+    
+
+    def validateSpeed(self):
+        """
+        Validates that all speed values are less than or equal to 32.0.
+        Values above 32.0 are set to NaN before interpolation.
+        Returns True if 'speed' column exists and interpolation succeeds.
+        """
+        print("Running validateSpeed...")
+
+        if 'speed' not in self.df.columns:
+            print("Missing 'speed' column in the dataframe!")
+            return False
+
+        # Mark speeds above 32.0 as NaN
+        mask_too_fast = self.df['speed'] > 32.0
+        self.df.loc[mask_too_fast, 'speed'] = float('nan')
+
+        if self.df['speed'].isna().any():
+            print(f"Interpolating {self.df['speed'].isna().sum()} speed values greater than 32.0...")
+            self.df['speed'] = self.df['speed'].interpolate(method='linear', limit_direction='both')
+
+        # Final check to ensure all speed values are now <= 32.0 and not NaN
+        invalid_mask = self.df['speed'].isna() | (self.df['speed'] > 32.0)
+        if invalid_mask.any():
+            print("Some speed values remain invalid or could not be interpolated.")
+            return False
+
+        print("All speed values are now valid (≤ 32.0).")
+        return True
+    
     
 def main():
     """
@@ -351,8 +417,15 @@ def main():
             df[col] = pd.to_numeric(df[col], errors='coerce')
 
         validator = Validation(df)
-        validator.validate()
-        print(validator.get_dataframe())
+        validator.validateBeforeTransform()
+        transformer = Transformer(validator.get_dataframe())
+        transformer.transform()
+        transformed_df = transformer.get_dataframe()
+
+        Validation(transformed_df).validateAfterTransform()
+        print(transformed_df)
+        max_speed = transformed_df['speed'].max()
+        print(f'Max speed found: {max_speed}')
 
     except FileNotFoundError:
         print(f"Error: The file '{file_path}' was not found.")

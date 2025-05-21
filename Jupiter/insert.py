@@ -105,7 +105,7 @@ if __name__ == "__main__":
 
         # Instantiate the Validator
         validator = Validation(df)
-        validator.validate()
+        validator.validateBeforeTransform()
 
         validated_df = validator.get_dataframe()
 
