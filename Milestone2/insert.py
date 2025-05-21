@@ -119,24 +119,9 @@ if __name__ == "__main__":
         This is how the function is intended to be used. This worked on my local PostgreSQL, sh should work on vm.
         """
         db_uri = "postgresql://postgres:postgres@localhost:5432/testdb"
-
-        """
-        Important: dataframe has to be prepared for insertion for both tables. For now,
-        I will do it here manually. Later, it can be added into transformer. Gere is what needs to be done:
-        """
-        def prepare_for_trip_table(df):
-            trip_df = df[['trip_id', 'vehicle_id']].copy()
-
-            trip_df = trip_df.drop_duplicates(subset=['trip_id'])
-            return trip_df
         
-        def prepare_for_breadcrumb_table(df):
-            breadcrumb_df = df[['tstamp', 'latitude', 'longitude', 'speed', 'trip_id']].copy()
-
-            return breadcrumb_df
-        
-        dataframe_trip = prepare_for_trip_table(transformed_df)
-        dataframe_breadcrumb = prepare_for_breadcrumb_table(transformed_df)
+        dataframe_trip = Transformer.createTripDF(transformed_df)
+        dataframe_breadcrumb = Transformer.createBreadcrumbDF(transformed_df)
 
         with DataFrameSQLInserter(db_uri) as inserter:
             inserter.insert_dataframe(dataframe_trip, "trip")
