@@ -88,6 +88,17 @@ class Transformer:
         ]
         self.df.drop(columns=columns_to_drop, inplace=True, errors='ignore')
 
+    def createTripDF(df):
+            trip_df = df[['trip_id', 'vehicle_id']].copy()
+            trip_df = trip_df.drop_duplicates(subset=['trip_id'])
+
+            return trip_df
+
+    def createBreadcrumbDF(df):
+            breadcrumb_df = df[['tstamp', 'latitude', 'longitude', 'speed', 'trip_id']].copy()
+            
+            return breadcrumb_df
+
 def main():
     """
         Main function used for TESTING purposes. Include a local json file
