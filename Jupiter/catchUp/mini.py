@@ -17,6 +17,12 @@ class DataPipeline:
 
         self.logger.info("initialized logger successfully")
 
+    def run_parser(self, file_list):
+        parser = StopEventParser(self.logger)
+        all_messages = parser.load_json_bulk(file_list)
+        self.logger.info(f"Total messages extracted: {len(all_messages)}")
+        return all_messages
+
 def is_logically_empty_json(file_path):
     with open(file_path, 'r') as f:
         data = json.load(f)
@@ -36,11 +42,11 @@ if __name__ == "__main__":
     files = list_files_in_directory(folder)
     valid_files = []
     for file in files:
-       if is_logically_empty_json(file):
+       if is_logically_empty_json(folder + '/' + file):
           continue
        else:
-          valid_files.append(file)
-    test = StopEventParser.load_json_bulk(valid_files)
+          valid_files.append(folder + '/' + file)
+    test = dp.run_parser(valid_files)
 
     future_list = []
     project_id = "data-engineering-455419"

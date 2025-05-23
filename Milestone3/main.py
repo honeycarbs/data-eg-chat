@@ -38,13 +38,19 @@ class DataPipeline:
             self.fetcher.fetch(output_file, id)
             names.append(output_file)
         return names
+    
+    def run_parser(self, file_list):
+        parser = StopEventParser(self.logger)
+        all_messages = parser.load_json_bulk(file_list)
+        self.logger.info(f"Total messages extracted: {len(all_messages)}")
+        return all_messages
 
 if __name__ == "__main__":
     dp = DataPipeline(logging.DEBUG)
     ids = dp.PrepareIDGroup("Jupiter/id.txt")
     names = dp.FetchBreadCrumbsBulk(ids)
     
-    test = StopEventParser.load_json_bulk(names)
+    test = dp.run_parser(names)
 
     future_list = []
     project_id = "data-engineering-455419"

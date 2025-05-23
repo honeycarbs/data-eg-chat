@@ -16,7 +16,7 @@ class GCSUploader:
         return f"gs://{self.bucket.name}/{destination_blob_name}"
 
 class PubSubFetcher:
-    def __init__(self, project_id, subscription_id, bucket_name, timeout=600.0):
+    def __init__(self, project_id, subscription_id, bucket_name, timeout=300.0):
         self.project_id = project_id
         self.subscription_id = subscription_id
         self.timeout = timeout
