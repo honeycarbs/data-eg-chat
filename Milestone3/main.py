@@ -1,4 +1,6 @@
 from fetcher import StopEventFetcher
+from pub import PubSubPublisher
+from concurrent import futures
 import logging
 
 class DataPipeline:
@@ -38,3 +40,19 @@ if __name__ == "__main__":
     dp = DataPipeline(logging.DEBUG)
     ids = dp.PrepareIDGroup("Jupiter/id.txt")
     dp.FetchBreadCrumbsBulk(ids)
+
+    test = [] # place holder for how ever we want to place parsed info into publisher
+
+    future_list = []
+    project_id = "data-engineering-455419"
+    topic_id = "Stop-Event-Data"
+    
+    publisher = PubSubPublisher(project_id, topic_id)
+    future_list = [publisher.publish(repr(x)) for x in test]
+    dp.logger.info(f"Publishing {len(future_list)} Stop Event messages to Pub/Sub.")
+
+    for future in future_list:
+        try:
+            future.result()
+        except Exception as e:
+            dp.logger.error(f"Error publishing message: {e}")
