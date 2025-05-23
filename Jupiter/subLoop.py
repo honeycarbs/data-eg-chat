@@ -85,7 +85,7 @@ def validateTransformLoad(file_path):
         print(transformed_df.head())
 
 
-        db_uri = "postgresql://postgres:password@localhost/postgres"
+        db_uri = os.getenv("DB_URI")
 
         def prepare_for_trip_table(df):
             trip_df = df[['trip_id', 'vehicle_id']].copy()

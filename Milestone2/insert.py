@@ -4,6 +4,7 @@ from sqlalchemy.engine.base import Engine
 from typing import Optional, Dict, Any
 import csv
 from io import StringIO
+import os
 
 from transformer import Transformer
 from dataValidation import Validation
@@ -118,7 +119,7 @@ if __name__ == "__main__":
         """
         This is how the function is intended to be used. This worked on my local PostgreSQL, sh should work on vm.
         """
-        db_uri = "postgresql://postgres:postgres@localhost:5432/testdb"
+        db_uri = os.getenv("DB_URI")
         
         dataframe_trip = Transformer.createTripDF(transformed_df)
         dataframe_breadcrumb = Transformer.createBreadcrumbDF(transformed_df)
