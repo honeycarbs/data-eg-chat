@@ -61,7 +61,7 @@ def fetch():
         gcs_path = upload_to_gcs(bucket_name, filename, gcs_filename)
 
         # Optional: validate/load using local file
-        validateTransformLoad(filename)
+        validateTransformLoad(messages)
 
         # Delete local file
         os.remove(filename)
@@ -70,13 +70,9 @@ def fetch():
         # Clear message buffer
         messages.clear()
 
-def validateTransformLoad(file_path):
+def validateTransformLoad(raw_messages):
     try:
-        with open(file_path, 'r') as file:
-            data = load(file)
-
         # Step 1: Convert list of strings to list of dictionaries
-        raw_messages = data.get('messages', [])
         parsed_messages = []
         for msg in raw_messages:
             fields = dict(field.strip().split(': ', 1) for field in msg.split(', '))
@@ -101,7 +97,7 @@ def validateTransformLoad(file_path):
         transformed_df = transformer.get_dataframe()
 
         db_uri = os.getenv("DB_URI")
-        
+
         dataframe_trip = Transformer.createTripDF(transformed_df)
         dataframe_breadcrumb = Transformer.createBreadcrumbDF(transformed_df)
 
