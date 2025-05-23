@@ -96,6 +96,8 @@ def validateTransformLoad(raw_messages):
         transformer.transform()
         transformed_df = transformer.get_dataframe()
 
+        Validation(transformed_df).validateAfterTransform()
+
         db_uri = os.getenv("DB_URI")
 
         dataframe_trip = Transformer.createTripDF(transformed_df)
