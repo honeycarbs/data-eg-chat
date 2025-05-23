@@ -1,6 +1,6 @@
 from fetcher import StopEventFetcher
 from pub import PubSubPublisher
-from concurrent import futures
+from parser import StopEventParser
 import logging
 
 class DataPipeline:
@@ -32,16 +32,19 @@ class DataPipeline:
         return ids
     
     def FetchBreadCrumbsBulk(self, id_list):
+        names = []
         for id in id_list:
             output_file = f"events/stop_events_{id}.json"
             self.fetcher.fetch(output_file, id)
+            names.append(output_file)
+        return names
 
 if __name__ == "__main__":
     dp = DataPipeline(logging.DEBUG)
     ids = dp.PrepareIDGroup("Jupiter/id.txt")
-    dp.FetchBreadCrumbsBulk(ids)
-
-    test = [] # place holder for how ever we want to place parsed info into publisher
+    names = dp.FetchBreadCrumbsBulk(ids)
+    
+    test = StopEventParser.load_json_bulk(names)
 
     future_list = []
     project_id = "data-engineering-455419"
