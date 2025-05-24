@@ -2,8 +2,8 @@ import pandas as pd
 
 class stopEventTransformer:
     def __init__(self, df: pd.DataFrame):
-        self.df = df
-
+        self.df = df.copy()
+        
     def transform(self):
         self.dropDuplicates()
         self.renameColumns()
