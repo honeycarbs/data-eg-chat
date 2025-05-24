@@ -19,13 +19,11 @@ class Validation:
         self.validateLatitudeRange()
         self.validateLongitudeRange()
         self.validateTripIdOneVehicle()
-        #self.validateSummaryStats()
         self.validateDirection()
         self.validateTripIdOneVehicle()
         self.validateEventNoTrip()
         self.validateEventNoStop()
         self.validateMeters()
-        #self.validateActTime()
 
     def validateDate(self):
         """
