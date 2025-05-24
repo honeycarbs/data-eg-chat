@@ -77,12 +77,26 @@ class StopEventValidator:
 
     def validate_service_key(self):
         """
-        Validates that the 'service_key' column contains no NaN values.
-        Removes rows where 'service_key' is NaN.
+        Removes rows whose 'service_key' is missing.
+
+        Missing is defined as:
+          • a true NaN / pd.NA
+          • the string 'nan', 'NaN', 'None', or '' (case-insensitive)
         """
+        # A mask that is True for any kind of “missing” value
+        invalid_mask = (
+            self.df['service_key'].isna() |                     # real NaN / None
+            self.df['service_key']
+                .astype(str)
+                .str.strip()                                    # handle '  nan  '
+                .str.lower()
+                .isin({'nan', 'none', ''})                      # string placeholders
+        )
+
         try:
-            invalid_mask = self.df['service_key'].isna()
-            assert not invalid_mask.any(), "'service_key' contains NaN values"
+            assert not invalid_mask.any(), (
+                f"'service_key' contains missing values: "
+                f"{self.df.loc[invalid_mask, 'service_key'].tolist()}"
+            )
         except AssertionError:
-            # keep only rows whose service_key is *not* NaN
             self.df = self.df[~invalid_mask].reset_index(drop=True)
