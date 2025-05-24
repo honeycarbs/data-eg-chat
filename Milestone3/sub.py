@@ -37,6 +37,7 @@ class StopEventPipeline:
 
             stopEvent = StopEventValidator(df)
             validated_df = stopEvent.validate()
+            validated_df = validated_df.drop_duplicates(subset=['trip_id'])
 
 
             with DataFrameSQLInserter(self.db_uri) as inserter:
