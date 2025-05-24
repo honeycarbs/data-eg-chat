@@ -10,6 +10,7 @@ class StopEventValidator:
         self.validate_direction()
         self.validate_vehicle_number()
         self.validate_route_number()
+        self.validate_service_key()
         return self.df
 
     def validate_columns_exist(self):
@@ -72,4 +73,16 @@ class StopEventValidator:
             invalid_mask = self.df['vehicle_number'].apply(lambda val: str(val).lstrip('-').isdigit() and int(val) < 0)
             assert not invalid_mask.any(), f"vehicle_number contains negative values: {self.df.loc[invalid_mask, 'vehicle_number'].tolist()}"
         except AssertionError:
+            self.df = self.df[~invalid_mask].reset_index(drop=True)
+
+    def validate_service_key(self):
+        """
+        Validates that the 'service_key' column contains no NaN values.
+        Removes rows where 'service_key' is NaN.
+        """
+        try:
+            invalid_mask = self.df['service_key'].isna()
+            assert not invalid_mask.any(), "'service_key' contains NaN values"
+        except AssertionError:
+            # keep only rows whose service_key is *not* NaN
             self.df = self.df[~invalid_mask].reset_index(drop=True)
