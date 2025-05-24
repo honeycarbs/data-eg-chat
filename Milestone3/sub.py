@@ -28,6 +28,10 @@ class StopEventPipeline:
             parsed_messages = [literal_eval(msg) for msg in raw_messages]
             df = pd.DataFrame(parsed_messages)
 
+            numeric_cols = ['trip_id', 'vehicle_number', 'route_number', 'direction']
+            for col in numeric_cols:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+
             stopEvent = StopEventValidator(df)
             validated_df = stopEvent.validate()
             validated_df = validated_df.drop_duplicates(subset=['trip_id'])
