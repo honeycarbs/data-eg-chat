@@ -1,6 +1,8 @@
-from fetcher import StopEventFetcher
 from pub import PubSubPublisher
 from parser import StopEventParser
+import os
+import json
+
 import logging
 
 class DataPipeline:
@@ -15,42 +17,36 @@ class DataPipeline:
 
         self.logger.info("initialized logger successfully")
 
-        self.fetcher = StopEventFetcher()
-        self.logger.info("initialized fetcher successfully")
-
-    """
-    The first step of the new pipeline: opening the file and fetching data
-    """
-    def PrepareIDGroup(self, id_group_file):
-        ids = []
-        with open(id_group_file, "r") as file:
-            for line in file:
-                id = line.strip()
-                ids.append(id)
-
-        self.logger.info(f"got {len(ids)} records from {id_group_file}")
-        return ids
-    
-    def FetchBreadCrumbsBulk(self, id_list):
-        names = []
-        for id in id_list:
-            output_file = f"events/stop_events_{id}.json"
-            self.fetcher.fetch(output_file, id)
-            names.append(output_file)
-        return names
-    
     def run_parser(self, file_list):
         parser = StopEventParser(self.logger)
         all_messages = parser.load_json_bulk(file_list)
         self.logger.info(f"Total messages extracted: {len(all_messages)}")
         return all_messages
 
+def is_logically_empty_json(file_path):
+    with open(file_path, 'r') as f:
+        data = json.load(f)
+    return "trips" in data and isinstance(data["trips"], list) and len(data["trips"]) == 0
+
+def list_files_in_directory(folder_path):
+  try:
+    files = os.listdir(folder_path)
+    return [f for f in files if os.path.isfile(os.path.join(folder_path, f))]
+  
+  except Exception as e:
+    return f"An error occurred: {e}"
+
 if __name__ == "__main__":
     dp = DataPipeline(logging.DEBUG)
-    ids = dp.PrepareIDGroup("Jupiter/id.txt")
-    names = dp.FetchBreadCrumbsBulk(ids)
-    
-    test = dp.run_parser(names)
+    folder = "events2"
+    files = list_files_in_directory(folder)
+    valid_files = []
+    for file in files:
+       if is_logically_empty_json(folder + '/' + file):
+          continue
+       else:
+          valid_files.append(folder + '/' + file)
+    test = dp.run_parser(valid_files)
 
     future_list = []
     project_id = "data-engineering-455419"
@@ -65,3 +61,4 @@ if __name__ == "__main__":
             future.result()
         except Exception as e:
             dp.logger.error(f"Error publishing message: {e}")
+
