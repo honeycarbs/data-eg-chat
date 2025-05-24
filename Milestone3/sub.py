@@ -6,6 +6,7 @@ from google.cloud import pubsub_v1, storage
 from concurrent.futures import TimeoutError
 from insert import DataFrameSQLInserter
 from stopEventValidation import StopEventValidator
+from stopEventTransformation import stopEventTransformer
 from ast import literal_eval 
 
 class GCSUploader:
@@ -34,11 +35,11 @@ class StopEventPipeline:
 
             stopEvent = StopEventValidator(df)
             validated_df = stopEvent.validate()
-            validated_df = validated_df.drop_duplicates(subset=['trip_id'])
-            validated_df.rename(columns={'vehicle_number': 'vehicle_id'}, inplace=True)
+            transformer = stopEventTransformer(validated_df)
+            validated_transformed_df = transformer.transform()
 
             with DataFrameSQLInserter(self.db_uri) as inserter:
-                inserter.insert_dataframe(validated_df, "trip")
+                inserter.insert_dataframe(validated_transformed_df, "trip")
 
         except Exception as e:
             print(f"Error in validate_load: {e}")
