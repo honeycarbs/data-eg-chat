@@ -10,6 +10,7 @@ class StopEventValidator:
         self.validate_direction()
         self.validate_vehicle_number()
         self.validate_route_number()
+        return self.df
 
     def validate_columns_exist(self):
         """

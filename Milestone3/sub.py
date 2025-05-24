@@ -4,10 +4,8 @@ from datetime import datetime
 import pandas as pd
 from google.cloud import pubsub_v1, storage
 from concurrent.futures import TimeoutError
-
-from transformer import Transformer
-from dataValidation import Validation
 from insert import DataFrameSQLInserter
+from stopEventValidation import StopEventValidator
 
 class GCSUploader:
     def __init__(self, bucket_name):
@@ -20,13 +18,11 @@ class GCSUploader:
         print(f"File {source_file_path} uploaded to {destination_blob_name}.")
         return f"gs://{self.bucket.name}/{destination_blob_name}"
     
-
-
-class BreadcrumbPipeline:
+class StopEventPipeline:
     def __init__(self, db_uri):
         self.db_uri = db_uri
 
-    def validate_transform_load(self, raw_messages):
+    def validate_load(self, raw_messages):
         try:
             parsed_messages = [
                 dict(field.strip().split(': ', 1) for field in msg.split(', '))
@@ -35,30 +31,19 @@ class BreadcrumbPipeline:
 
             df = pd.DataFrame(parsed_messages)
 
-            numeric_cols = ['EVENT_NO_TRIP', 'EVENT_NO_STOP', 'VEHICLE_ID', 'METERS', 'ACT_TIME',
-                            'GPS_LONGITUDE', 'GPS_LATITUDE', 'GPS_SATELLITES', 'GPS_HDOP']
+            numeric_cols = ['trip_id', 'vehicle_number', 'route_number', 'direction', 'service_key']
             for col in numeric_cols:
                 df[col] = pd.to_numeric(df[col], errors='coerce')
 
-            validator = Validation(df)
-            validator.validateBeforeTransform()
-            validated_df = validator.get_dataframe()
+            stopEvent = StopEventValidator(df)
+            validated_df = stopEvent.validate()
 
-            transformer = Transformer(validated_df)
-            transformer.transform()
-            transformed_df = transformer.get_dataframe()
-
-            Validation(transformed_df).validateAfterTransform()
-
-            dataframe_trip = Transformer.createTripDF(transformed_df)
-            dataframe_breadcrumb = Transformer.createBreadcrumbDF(transformed_df)
 
             with DataFrameSQLInserter(self.db_uri) as inserter:
-                inserter.insert_dataframe(dataframe_trip, "trip")
-                inserter.insert_dataframe(dataframe_breadcrumb, "breadcrumb")
+                inserter.insert_dataframe(validated_df, "trip")
 
         except Exception as e:
-            print(f"Error in validate_transform_load: {e}")
+            print(f"Error in validate_load: {e}")
 
 class PubSubFetcher:
     def __init__(self, project_id, subscription_id, bucket_name, timeout=1800.0):
@@ -67,7 +52,7 @@ class PubSubFetcher:
         self.timeout = timeout
         self.uploader = GCSUploader(bucket_name)
         #Pipeline To Be Implemented
-        #self.pipeline = BreadcrumbPipeline(db_uri)
+        #self.pipeline = StopEventPipeline(db_uri)
         self.messages = []
 
     def _callback(self, message: pubsub_v1.subscriber.message.Message):
@@ -107,12 +92,12 @@ class PubSubFetcher:
 
             # Validate, transform, and load
             # To be Implemented
-            #self.pipeline.validate_transform_load(self.messages)
+            self.pipeline.validate_load(self.messages)
 
             # Clean up
-            #os.remove(filename)
-            #print(f"Deleted local file: {filename}")
-            #self.messages.clear()
+            os.remove(filename)
+            print(f"Deleted local file: {filename}")
+            self.messages.clear()
 
 if __name__ == "__main__":
     project_id = "data-engineering-455419"
