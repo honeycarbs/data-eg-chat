@@ -6,6 +6,7 @@ from google.cloud import pubsub_v1, storage
 from concurrent.futures import TimeoutError
 from insert import DataFrameSQLInserter
 from stopEventValidation import StopEventValidator
+from ast import literal_eval 
 
 class GCSUploader:
     def __init__(self, bucket_name):
@@ -24,16 +25,8 @@ class StopEventPipeline:
 
     def validate_load(self, raw_messages):
         try:
-            parsed_messages = [
-                dict(field.strip().split(': ', 1) for field in msg.split(', '))
-                for msg in raw_messages
-            ]
-
+            parsed_messages = [literal_eval(msg) for msg in raw_messages]
             df = pd.DataFrame(parsed_messages)
-
-            numeric_cols = ['trip_id', 'vehicle_number', 'route_number', 'direction', 'service_key']
-            for col in numeric_cols:
-                df[col] = pd.to_numeric(df[col], errors='coerce')
 
             stopEvent = StopEventValidator(df)
             validated_df = stopEvent.validate()
