@@ -34,14 +34,3 @@ class StopEventFetcher:
                 self.logger.warning(f"no data found for vehicle {vehicle_id}")
         except Exception as e:
             self.logger.error(f"error fetching data for vehicle {vehicle_id}: {e}")
-
-
-# Read IDs from the file and fetch stop events
-# change path for id.txt file
-# with open("Jupiter/id.txt", "r") as file:
-#     fetcher = StopEventFetcher()
-#     for line in file:
-#         vehicle_id = line.strip()
-#         if vehicle_id:  # Skip empty lines
-#             output_filename = f"stop_events_{vehicle_id}.json"
-#             fetcher.fetch(output_filename, vehicle_id)

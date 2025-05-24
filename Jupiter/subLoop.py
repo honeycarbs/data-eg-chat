@@ -100,11 +100,12 @@ def validateTransformLoad(raw_messages):
 
         db_uri = os.getenv("DB_URI")
 
-        dataframe_trip = Transformer.createTripDF(transformed_df)
+        #dataframe_trip = Transformer.createTripDF(transformed_df)
         dataframe_breadcrumb = Transformer.createBreadcrumbDF(transformed_df)
 
         with DataFrameSQLInserter(db_uri) as inserter:
-            inserter.insert_dataframe(dataframe_trip, "trip")
+            # We no longer insert into 'trip' table after Milestone2.
+            #inserter.insert_dataframe(dataframe_trip, "trip")
             inserter.insert_dataframe(dataframe_breadcrumb, "breadcrumb")
 
     except Exception as e:

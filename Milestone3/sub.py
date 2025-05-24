@@ -46,13 +46,12 @@ class StopEventPipeline:
             print(f"Error in validate_load: {e}")
 
 class PubSubFetcher:
-    def __init__(self, project_id, subscription_id, bucket_name, timeout=1800.0):
+    def __init__(self, project_id, subscription_id, bucket_name, db_uri, timeout=1800.0):
         self.project_id = project_id
         self.subscription_id = subscription_id
         self.timeout = timeout
         self.uploader = GCSUploader(bucket_name)
-        #Pipeline To Be Implemented
-        #self.pipeline = StopEventPipeline(db_uri)
+        self.pipeline = StopEventPipeline(db_uri)
         self.messages = []
 
     def _callback(self, message: pubsub_v1.subscriber.message.Message):
@@ -90,8 +89,7 @@ class PubSubFetcher:
             # Upload to GCS
             gcs_path = self.uploader.upload(filename, gcs_filename)
 
-            # Validate, transform, and load
-            # To be Implemented
+            # Validate & load to DB
             self.pipeline.validate_load(self.messages)
 
             # Clean up
@@ -103,7 +101,7 @@ if __name__ == "__main__":
     project_id = "data-engineering-455419"
     subscription_id = "Stop-Event-Data-sub"
     bucket_name = "jakira-stop-bucket"
-    #db_uri = os.getenv("DB_URI")
+    db_uri = os.getenv("DB_URI")
 
-    fetcher = PubSubFetcher(project_id, subscription_id, bucket_name)
+    fetcher = PubSubFetcher(project_id, subscription_id, bucket_name, db_uri)
     fetcher.fetch_and_process()
