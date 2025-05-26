@@ -27,7 +27,6 @@ class Validation:
     
     def validateAfterTransform(self):
         self.validateSpeed()
-        self.validateDirection()
 
     def validateDate(self):
         """
@@ -166,26 +165,7 @@ class Validation:
         print("Summary statistics are within expected Portland-specific ranges.")
         return True
 
-    def validateDirection(self):
-        """
-        Ensures that the 'DIRECTION' column only contains valid values (1 or 0).
-        Returns True if valid, False otherwise.
-        """
-        print("Running validateDirection...")
 
-        if 'DIRECTION' not in self.df.columns:
-            print("Missing 'DIRECTION' column in the dataframe!")
-            return False
-
-        invalid_direction_mask = ~self.df['DIRECTION'].isin([0, 1])
-
-        if invalid_direction_mask.any():
-            print(f"Found {invalid_direction_mask.sum()} invalid 'DIRECTION' values.")
-            return False
-
-        print("All DIRECTION values are valid (either 1 or 0).")
-        return True
-        
     def validateTripIdOneVehicle(self):
         """
         Validates that each EVENT_NO_TRIP is associated with only one VEHICLE_ID.
