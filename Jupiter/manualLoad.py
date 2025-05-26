@@ -57,8 +57,8 @@ def validate_transform_load(json_file_path: str) -> None:
     db_uri = os.getenv("DB_URI")
     breadcrumb_df = Transformer.createBreadcrumbDF(transformed_df)
     
-    # with DataFrameSQLInserter(db_uri) as inserter:
-    inserter.insert_dataframe(breadcrumb_df, "breadcrumb")
+    with DataFrameSQLInserter(db_uri) as inserter:
+        inserter.insert_dataframe(breadcrumb_df, "breadcrumb")
 
 
 if __name__ == "__main__":
