@@ -1,15 +1,9 @@
 import psycopg2
 import csv
+import os
 
 # Database connection settings
-# change to this when transferred to VM -> db_uri = os.getenv("DB_URI")
-db_config = {
-    'host': 'localhost',
-    'database': 'db_name', 
-    'user': 'helenkhoshnaw',
-    'password': 'password',
-    'port': 5432
-}
+db_uri = os.getenv('DB_URI')
 
 # change trip_id when creating visuals
 trip_id = 1
@@ -25,7 +19,7 @@ output_file = "trip_data.tsv"
 def export_trip_data():
     try:
         # Connect to the PostgreSQL database
-        conn = psycopg2.connect(**db_config)
+        conn = psycopg2.connect(db_uri)
         cursor = conn.cursor()
 
         # Execute query
