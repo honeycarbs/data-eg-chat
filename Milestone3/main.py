@@ -2,6 +2,8 @@ from fetcher import StopEventFetcher
 from pub import PubSubPublisher
 from parser import StopEventParser
 import logging
+import os
+from datetime import date
 
 class DataPipeline:
     def __init__(self, LOG_LEVEL):
@@ -33,8 +35,18 @@ class DataPipeline:
     
     def FetchBreadCrumbsBulk(self, id_list):
         names = []
+        today = date.today()
+        today = today.strftime("%Y-%m-%d")
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        new_folder_path = os.path.join(script_dir, today)
+    
+        try:
+            os.mkdir(new_folder_path)
+            print(f"Folder '{new_folder_path}' created successfully.")
+        except Exception as e:
+            return f"An error occurred: {e}"
         for id in id_list:
-            output_file = f"events/stop_events_{id}.json"
+            output_file = f"{today}/stop_events_{id}.json"
             self.fetcher.fetch(output_file, id)
             names.append(output_file)
         return names
