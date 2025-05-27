@@ -1,36 +1,31 @@
-#!/usr/bin/python3
-import csv, json
+import csv
+import geojson
 from geojson import Feature, FeatureCollection, Point
+
 features = []
 
-with open('trip_data.tsv', newline='') as csvfile:
-    reader = csv.reader(csvfile, delimiter='\t')
-    data = csvfile.readlines()
-    for line in data[1:len(data)-1]:
-        line.strip()
-        row = line.split("\\t")
-        
-        # skip the rows where speed is missing
-        print(row)
-        x = row[0]
-        y = row[1]
-        speed = row[2]
-        if speed is None or speed == "":
-            continue
-     
-        try:
-            latitude, longitude = map(float, (y, x))
-            features.append(
-                Feature(
-                    geometry = Point((longitude,latitude)),
-                    properties = {
-                        'speed': (int(speed))
-                    }
-                )
-            )
-        except ValueError:
+with open("trip_data.tsv", newline="") as csvfile:
+    reader = csv.reader(csvfile, delimiter="\t")
+
+    header = next(reader, None)          # remove if the file has no header
+    for lon, lat, speed in reader:       # unpack the three columns
+        if not speed:                    # skip empty speed
             continue
 
+        try:
+            lon, lat = float(lon), float(lat)
+            speed   = float(speed)       # or int(speed) if always whole
+        except ValueError:               # bad numeric data – skip row
+            continue
+
+        features.append(
+            Feature(
+                geometry=Point((lon, lat)),
+                properties={"speed": speed},
+            )
+        )
+
 collection = FeatureCollection(features)
+
 with open("trip_data.geojson", "w") as f:
-    f.write('%s' % collection)
+    geojson.dump(collection, f, indent=2)
